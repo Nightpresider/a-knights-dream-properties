@@ -1,0 +1,15 @@
+<fieldset>
+    <legend>{{ localize "AKDP.ADVANCEMENT.CreatureBlendGrant.Details" }}</legend>
+    <div class="form-group">
+        <label>{{ localize "AKDP.ADVANCEMENT.CreatureBlendGrant.FIELDS.creatureType.label" }}</label>
+        <div class="form-fields">
+            <select name="configuration.creatureType">
+                {{#each creatureTypeOptions}}
+                <option value="{{ value }}" {{ selected selected }}>{{ label }}</option>
+                {{/each}}
+            </select>
+        </div>
+    </div>
+    {{ formGroup configuration.fields.threshold name="configuration.threshold"
+                 value=configuration.data.threshold rootId=partId }}
+</fieldset>

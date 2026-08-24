@@ -1,0 +1,27 @@
+.akd-material-fields {
+  margin-top: 0.5rem;
+}
+
+.akd-material-field {
+  margin-bottom: 0.5rem;
+}
+
+.akd-material-field label {
+  display: block;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.akd-material-field select {
+  width: 100%;
+}
+
+@keyframes akd-pulse-warning {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 60, 60, 0.75); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 60, 60, 0); }
+}
+
+.akd-pulse-warning {
+  animation: akd-pulse-warning 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}

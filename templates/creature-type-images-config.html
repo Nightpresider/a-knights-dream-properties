@@ -1,0 +1,22 @@
+<form class="akd-creature-type-images" autocomplete="off">
+  <p class="hint">Override the image used for any creature type in the percentage-blend UI. Types left
+    at their default use whichever icon the system (or another module) already provides.</p>
+  <ol class="akd-creature-type-images-list unlist">
+    {{#each types}}
+    <li class="akd-creature-type-image-row" data-type-key="{{key}}">
+      <img src="{{icon}}" width="32" height="32">
+      <label>{{label}}</label>
+      <input type="text" name="{{key}}" value="{{icon}}">
+      <button type="button" data-action="pick-image" title="Choose image">
+        <i class="fas fa-file-import"></i>
+      </button>
+      <button type="button" data-action="reset-image" title="Reset to default">
+        <i class="fas fa-undo"></i>
+      </button>
+    </li>
+    {{/each}}
+  </ol>
+  <footer class="sheet-footer form-group">
+    <button type="submit"><i class="fas fa-save"></i> Save Changes</button>
+  </footer>
+</form>

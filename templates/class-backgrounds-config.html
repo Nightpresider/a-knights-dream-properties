@@ -1,0 +1,27 @@
+<form class="akd-class-backgrounds" autocomplete="off">
+  <p class="hint">Assign a header banner and body texture per class. A character's sheet only
+    blends once <em>every</em> class they have is fully configured (both images set) - otherwise
+    the sheet keeps its normal default look.</p>
+  <ol class="akd-class-bg-list unlist">
+    {{#each rows}}
+    <li class="akd-class-bg-row" data-identifier="{{identifier}}">
+      <label>{{identifier}}</label>
+      <input type="text" name="{{identifier}}.header" value="{{header}}" placeholder="Header banner image">
+      <button type="button" data-action="pick-image" data-target="{{identifier}}.header" title="Choose image">
+        <i class="fas fa-file-import"></i>
+      </button>
+      <input type="text" name="{{identifier}}.body" value="{{body}}" placeholder="Body texture image">
+      <button type="button" data-action="pick-image" data-target="{{identifier}}.body" title="Choose image">
+        <i class="fas fa-file-import"></i>
+      </button>
+    </li>
+    {{/each}}
+  </ol>
+  <div class="form-group akd-class-bg-add">
+    <input type="text" name="new-identifier" placeholder="custom class identifier (e.g. artisan)">
+    <button type="button" data-action="add-row"><i class="fas fa-plus"></i> Add</button>
+  </div>
+  <footer class="sheet-footer form-group">
+    <button type="submit"><i class="fas fa-save"></i> Save Changes</button>
+  </footer>
+</form>

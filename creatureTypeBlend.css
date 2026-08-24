@@ -1,0 +1,747 @@
+/* ── Creature Type Images settings menu ───────────────────────────────────────
+   The per-species image override dialog (creatureTypeImages.mjs). */
+
+.akd-creature-type-images-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.akd-creature-type-image-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.akd-creature-type-image-row img {
+  border-radius: 4px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.akd-creature-type-image-row label {
+  flex: 0 0 8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.akd-creature-type-image-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ── Creature Type Config dialog ──────────────────────────────────────────────
+   The .meter.progress bar itself is styled natively by dnd5e's own
+   .dnd5e2 .meter.progress rules; only layout/spacing for the fields we add lives here. */
+
+.akd-blend-fields {
+  margin-top: 0.5rem;
+}
+
+.akd-blend-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 16px;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.akd-blend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.akd-blend-row-custom {
+  grid-column: 1 / -1;
+}
+
+.akd-blend-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.akd-blend-custom-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.akd-blend-input {
+  width: 3.5em;
+  text-align: right;
+}
+
+.akd-blend-pct-sign {
+  opacity: 0.75;
+}
+
+.akd-blend-bar {
+  margin-bottom: 0.5rem;
+}
+
+.akd-blend-bar-invalid::before {
+  filter: grayscale(60%);
+}
+
+.akd-blend-apply {
+  width: 100%;
+}
+
+/* ── Shared: multi-type segments + hover feature table ────────────────────────
+   Used identically by the Character pill and NPC header sections below - only
+   how the .akd-blend-segments wrapper is sized/positioned within its host
+   element differs per sheet type. No name/percentage text renders here - that
+   only shows in the hover tooltip (built in JS), per design.
+
+   Two earlier approaches didn't read as a real blend: a plain alpha fade just
+   reveals the neighboring image with a visible cut where the fade ends, and a
+   backdrop-blur strip over a hard image-to-image edge just blurs the cut
+   in place rather than dissolving one image into the other. This version
+   layers three things per seam, each segment overlapping the previous by
+   --akd-blend-seam (compensated for by flex-grow sizing in JS, so segments
+   still fill the full row regardless of overlap width):
+     1. the previous segment's own sharp image (untouched, always full opacity)
+     2. this segment's OWN image, blurred (via a ::before duplicate - background-
+        image:inherit copies the JS-set background from the host element),
+        visible only in the middle of the seam - the "smear" zone
+     3. this segment's own image, sharp, fading in across the whole seam and
+        fully opaque past it - so the center of every segment is always crisp,
+        only the seam itself carries the blur
+   Both masks alternate between 45deg/135deg per segment for the alternating
+   diagonal look, and share the same seam width so the diagonal is clearly
+   visible rather than lost in a narrow strip. */
+
+.akd-blend-segments {
+  --akd-blend-seam: 70px;
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.akd-blend-segment {
+  position: relative;
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--dnd5e-gold-icon-background);
+}
+
+.akd-blend-segment:not(:first-child) {
+  margin-left: calc(-1 * var(--akd-blend-seam));
+}
+
+/* Layer 2: blurred duplicate, confined to the middle of the seam. */
+.akd-blend-segment:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: inherit;
+  background-size: cover;
+  background-position: center;
+  filter: blur(10px);
+}
+
+.akd-blend-segment:nth-child(odd):not(:first-child) {
+  mask-image: linear-gradient(135deg, transparent 0, black var(--akd-blend-seam));
+  -webkit-mask-image: linear-gradient(135deg, transparent 0, black var(--akd-blend-seam));
+}
+.akd-blend-segment:nth-child(odd):not(:first-child)::before {
+  mask-image: linear-gradient(135deg,
+    transparent 0, black calc(var(--akd-blend-seam) * 0.35),
+    black calc(var(--akd-blend-seam) * 0.75), transparent var(--akd-blend-seam));
+  -webkit-mask-image: linear-gradient(135deg,
+    transparent 0, black calc(var(--akd-blend-seam) * 0.35),
+    black calc(var(--akd-blend-seam) * 0.75), transparent var(--akd-blend-seam));
+}
+
+.akd-blend-segment:nth-child(even):not(:first-child) {
+  mask-image: linear-gradient(45deg, transparent 0, black var(--akd-blend-seam));
+  -webkit-mask-image: linear-gradient(45deg, transparent 0, black var(--akd-blend-seam));
+}
+.akd-blend-segment:nth-child(even):not(:first-child)::before {
+  mask-image: linear-gradient(45deg,
+    transparent 0, black calc(var(--akd-blend-seam) * 0.35),
+    black calc(var(--akd-blend-seam) * 0.75), transparent var(--akd-blend-seam));
+  -webkit-mask-image: linear-gradient(45deg,
+    transparent 0, black calc(var(--akd-blend-seam) * 0.35),
+    black calc(var(--akd-blend-seam) * 0.75), transparent var(--akd-blend-seam));
+}
+
+.locked-tooltip.akd-blend-tooltip,
+.tooltip.akd-blend-tooltip {
+  padding: 0;
+}
+
+.akd-blend-tooltip-table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.akd-blend-tooltip-table th,
+.akd-blend-tooltip-table td {
+  padding: 4px 10px;
+  vertical-align: top;
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.akd-blend-tooltip-table th:first-child,
+.akd-blend-tooltip-table td:first-child {
+  border-inline-start: none;
+}
+
+.akd-blend-tooltip-table th {
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.akd-blend-tooltip-table ul {
+  margin: 0;
+  padding-inline-start: 1em;
+}
+
+/* ── Character actor sheet: .pills-lg .pill-lg.type ───────────────────────────
+   Segments fill the pill's own bordered card edge-to-edge (native padding
+   removed while active) and the gear-icon config button floats on top of them
+   as an overlay, so the image collage and the control read as one surface
+   instead of two separately-boxed regions. */
+
+.pill-lg.akd-blend-active {
+  position: relative;
+  flex: 1 1 auto;
+  padding: 0;
+  overflow: hidden;
+}
+
+.pill-lg.akd-blend-active .akd-blend-segments {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.pill-lg.akd-blend-active .config-button {
+  position: relative;
+  z-index: 1;
+  margin-inline-start: auto;
+  margin-inline-end: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+}
+
+/* ── NPC actor sheet: li.creature-type button ──────────────────────────────────
+   No native icon/pill chrome here - just a small button with a label and a gear
+   icon. Segments fill the whole button edge-to-edge the same way, with the gear
+   icon floating on top. */
+
+li.creature-type.akd-blend-active button {
+  position: relative;
+  overflow: hidden;
+  min-width: 8em;
+  min-height: 1.4em;
+}
+
+li.creature-type.akd-blend-active .akd-blend-segments {
+  --akd-blend-seam: 10px;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+li.creature-type.akd-blend-active button i.fa-cog {
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  padding: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Class Background Blend
+   Kept in this file for the same reason as its .mjs counterpart - see that
+   file's header comment.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Class Backgrounds settings menu ───────────────────────────────────────── */
+
+.akd-class-bg-list {
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.akd-class-bg-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.akd-class-bg-row label {
+  flex: 0 0 6em;
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.akd-class-bg-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.akd-class-bg-add {
+  display: flex;
+  gap: 6px;
+}
+
+.akd-class-bg-add input {
+  flex: 1 1 auto;
+}
+
+/* ── Shared: proportional class segments ───────────────────────────────────────
+   Same fade + confined-blur-duplicate + alternating-diagonal technique as
+   .akd-blend-segment above - duplicated (not shared) since the seam width
+   needs to scale to a much larger area (a full sheet header/body instead of a
+   small pill) and there's no tooltip to wire up. */
+
+.akd-class-blend-segments {
+  --akd-blend-seam: 90px;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.akd-class-blend-segment {
+  position: relative;
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.akd-class-blend-segment:not(:first-child) {
+  margin-left: calc(-1 * var(--akd-blend-seam));
+}
+
+.akd-class-blend-segment:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: inherit;
+  background-size: cover;
+  background-position: center;
+  filter: blur(12px);
+}
+
+.akd-class-blend-segment:nth-child(odd):not(:first-child) {
+  mask-image: linear-gradient(135deg, transparent 0, black var(--akd-blend-seam));
+  -webkit-mask-image: linear-gradient(135deg, transparent 0, black var(--akd-blend-seam));
+}
+.akd-class-blend-segment:nth-child(odd):not(:first-child)::before {
+  mask-image: linear-gradient(135deg,
+    transparent 0, black calc(var(--akd-blend-seam) * 0.35),
+    black calc(var(--akd-blend-seam) * 0.75), transparent var(--akd-blend-seam));
+  -webkit-mask-image: linear-gradient(135deg,
+    transparent 0, black calc(var(--akd-blend-seam) * 0.35),
+    black calc(var(--akd-blend-seam) * 0.75), transparent var(--akd-blend-seam));
+}
+
+.akd-class-blend-segment:nth-child(even):not(:first-child) {
+  mask-image: linear-gradient(45deg, transparent 0, black var(--akd-blend-seam));
+  -webkit-mask-image: linear-gradient(45deg, transparent 0, black var(--akd-blend-seam));
+}
+.akd-class-blend-segment:nth-child(even):not(:first-child)::before {
+  mask-image: linear-gradient(45deg,
+    transparent 0, black calc(var(--akd-blend-seam) * 0.35),
+    black calc(var(--akd-blend-seam) * 0.75), transparent var(--akd-blend-seam));
+  -webkit-mask-image: linear-gradient(45deg,
+    transparent 0, black calc(var(--akd-blend-seam) * 0.35),
+    black calc(var(--akd-blend-seam) * 0.75), transparent var(--akd-blend-seam));
+}
+
+/* ── Header injection ─────────────────────────────────────────────────────────
+   .sheet-header has no explicit position of its own; the injected segments
+   overlay is absolutely positioned to fill it, which (per normal CSS stacking)
+   would otherwise paint ABOVE the header's plain in-flow .left/.right text -
+   so those need an explicit stacking promotion to stay on top of it. */
+
+.dnd5e2.sheet.actor.character .sheet-header {
+  position: relative;
+}
+
+.sheet-header.akd-class-blend-active .akd-class-blend-segments {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.sheet-header.akd-class-blend-active > .left,
+.sheet-header.akd-class-blend-active > .right {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Body injection ───────────────────────────────────────────────────────────
+   Same reasoning: .main-content (the real tab content) needs to stay above
+   the absolutely-positioned segments overlay. */
+
+.dnd5e2.sheet.actor.character .sheet-body {
+  position: relative;
+}
+
+.sheet-body.akd-class-blend-active .akd-class-blend-segments {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.sheet-body.akd-class-blend-active > .main-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* The header looks fine stretched via `cover` (that region is naturally banner-shaped, close to
+   the source image's own proportions), but the body is much taller - stretching the same short,
+   wide image to cover it means scaling it up many times over, which is the pixelation/blur. dnd5e
+   itself never stretches its own body texture (texture1.webp/texture2.webp render at a fixed
+   height, anchored top/bottom, not scaled to fill) - mirror that here: show the image at its own
+   native resolution, tiling to fill the space, instead of one stretched, blown-up copy. */
+.sheet-body.akd-class-blend-active .akd-class-blend-segment {
+  background-size: auto;
+  background-position: top center;
+  background-repeat: repeat;
+}
+
+/* ── Single-class banner: reshape the fade so it only affects the bottom half ────
+   dnd5e's native .window-content::before rule (dnd5e.css:8681-8690) combines a
+   constant opacity:0.5 across the whole overlay with a mask fading the image to fully
+   invisible by the bottom. That dimming is uniform top-to-bottom - it just only reads
+   as visible dimming where the image itself still shows (the top; by the bottom
+   there's no image left to look dim, just flat background).
+
+   Scoped to .akd-class-bg-active (added by applySingleClassCssVars, removed by
+   clearClassCssVars - never touches dnd5e's own rule for any actor not using this
+   feature): opacity restored to 1 (no separate dimming layer), and the mask stays
+   fully opaque for the top half, only fading to transparent across the bottom half. */
+.dnd5e2.sheet.actor.character.akd-class-bg-active:not(.minimized) .window-content::before {
+  opacity: 1;
+  mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+}
+
+/* ── Per-actor image picker (injected into the native Sheet Configuration dialog) ── */
+
+/* This dialog's window-content has no scroll handling of its own, so left unbounded
+   these fieldsets push the whole window past the screen edge with no scrollbar at
+   all. Contains just the akdp-added content in its own scrollable region, leaving the
+   native Document/Defaults fieldsets untouched and always fully visible above it. */
+.akd-sheet-config-extra {
+  max-height: 45vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.akd-class-image-picker {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.akd-class-image-picker .akd-mode-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.akd-class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 0.3rem;
+  margin: 0.25rem 0 0.25rem 1.4rem;
+}
+
+.akd-class-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.15rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  font-size: var(--font-size-10, 10px);
+  line-height: 1.1;
+}
+
+.akd-class-option:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.akd-class-option:has(input:checked) {
+  border-color: var(--dnd5e-color-gold, #9f9275);
+  background: rgba(159, 146, 117, 0.15);
+}
+
+.akd-class-option img {
+  width: 100%;
+  aspect-ratio: 800 / 170;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.akd-class-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Deliberately NOT a <label> wrapping the radio - unlike the Auto row and each class
+   thumbnail, this row also holds a text input and a file-picker button, and clicking
+   into either of those must NOT toggle the radio (which would immediately save
+   whatever was already in the field). Only the pip itself is clickable to select this
+   option, exactly as asked. */
+.akd-custom-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: 1.4rem;
+}
+
+.akd-custom-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Confirmation overlay for the now-immediate "select = save" flow (no more separate
+   Save button) - counts down over whatever option (class thumbnail, Auto, or Custom)
+   was just clicked, then removes itself. */
+.akd-save-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: bold;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Panel Transparency
+   Sliders + color pickers, injected into the same Configure Sheet dialog as
+   the image picker above - see creatureTypeBlend.mjs's own Panel Transparency
+   section header for the full mechanism.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.akd-panel-transparency {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.akd-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.akd-slider-row span {
+  flex: 0 0 90px;
+}
+
+.akd-slider-row input[type="range"] {
+  flex: 1;
+}
+
+.akd-slider-row output {
+  flex: 0 0 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.akd-slider-row input[type="color"] {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--dnd5e-color-gold, #9f9275);
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+}
+
+.akd-panel-transparency-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Panel transparency effect (the actor sheet itself) ──────────────────────────
+   --akd-header-alpha / --akd-item-alpha are set (as percentage strings, e.g. "60%")
+   on the sheet root element by creatureTypeBlend.mjs's applyPanelTransparency(), from
+   a per-actor flag set via the two sliders above. Default 100% (fully opaque) - every
+   rule below is a no-op until a player actually moves a slider. Deliberately targets
+   background-color alpha via color-mix(), never element opacity, so text/icons/meter
+   bars stay fully readable regardless of slider position. Scoped to Details/Inventory/
+   Features/Spells/Effects - Biography is the only tab left untouched.
+
+   Mapped directly against the installed dnd5e.css (see file comments for exact line
+   numbers where relevant) - there is no single shared "background" variable, so each
+   distinct source gets its own override:
+     - .card .header: the colored section title bars (Inventory/Features/Spells/Effects -
+       Skills/Saving Throws/Tools have no separate header layer at all, see below).
+     - .card: the generic card body (covers the encumbrance card - and so the
+       STR/SIZE/MULTIPLIER row within it, which has no background of its own - each
+       items-section card, the spellcasting summary card, and the Effects tab's
+       Passive/Inactive/Unavailable/Conditions cards).
+     - item-list-controls search / .filter-element search: the "Search inventory" /
+       "Search effects" bar.
+     - .inventory-element .middle .attunement: the attunement count pill (Inventory/
+       Spells only).
+     - .items-section .item .item-description .item-summary: an item's expanded
+       description panel (Inventory/Features/Spells).
+     - filigree-box (Details only): Skills/Saving Throws/Tools are a CLOSED shadow-root
+       custom element - no external selector can reach its internal .backdrop directly.
+       Its only override hook is --filigree-background-color, a custom property that
+       does inherit through the shadow boundary. There's no separate header there to
+       distinguish, so only the items slider affects this one. */
+
+:is(
+  .dnd5e2.sheet.actor.character .tab[data-tab="inventory"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="features"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="spells"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="effects"]
+) .card .header {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--dnd5e-card-header-1) var(--akd-header-alpha, 100%), transparent),
+    color-mix(in srgb, var(--dnd5e-card-header-2) var(--akd-header-alpha, 100%), transparent)
+  );
+}
+
+:is(
+  .dnd5e2.sheet.actor.character .tab[data-tab="details"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="inventory"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="features"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="spells"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="effects"]
+) .card {
+  background: color-mix(in srgb, var(--dnd5e-background-card) var(--akd-item-alpha, 100%), transparent);
+}
+
+:is(
+  .dnd5e2.sheet.actor.character .tab[data-tab="inventory"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="features"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="spells"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="effects"]
+) :is(item-list-controls search, .filter-element search) {
+  background: color-mix(in srgb, var(--dnd5e-background-card) var(--akd-item-alpha, 100%), transparent);
+}
+
+:is(
+  .dnd5e2.sheet.actor.character .tab[data-tab="inventory"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="spells"]
+) .inventory-element .middle .attunement {
+  background: color-mix(in srgb, var(--dnd5e-background-card) var(--akd-item-alpha, 100%), transparent);
+}
+
+:is(
+  .dnd5e2.sheet.actor.character .tab[data-tab="inventory"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="features"],
+  .dnd5e2.sheet.actor.character .tab[data-tab="spells"]
+) .items-section .item .item-description .item-summary {
+  background: color-mix(in srgb, var(--item-summary-background) var(--akd-item-alpha, 100%), transparent);
+}
+
+/* --dnd5e-color-card (the shadow root's own internal fallback) is a constant near-white
+   (#f8f4f1, no dark-theme override anywhere in dnd5e.css) - using it here produced the
+   "whitening" look. --dnd5e-background-card is what every other card on the sheet
+   actually uses (resolves to the dark blue-gray-2 in dark theme, matching the rule
+   above) - explicitly setting --filigree-background-color from that instead keeps this
+   panel visually consistent with all the others. */
+.dnd5e2.sheet.actor.character .tab[data-tab="details"] filigree-box {
+  --filigree-background-color: color-mix(in srgb, var(--dnd5e-background-card) var(--akd-item-alpha, 100%), transparent);
+}
+
+/* ── Custom header/border colors (optional, off by default) ──────────────────────
+   --akd-header-color / --akd-border-color are only ever set - and their marker
+   classes (.akd-header-color-active / .akd-border-color-active) only ever added - once
+   a player actually picks a color in the Panel Transparency fieldset
+   (applyPanelTransparency in creatureTypeBlend.mjs). Native dnd5e.css is completely
+   untouched until then. Reassigning --dnd5e-border-gold or the header gradient
+   variables directly was avoided because both are shared by other native chrome (the
+   outer window frame, for one) that nobody asked to recolor. */
+
+.dnd5e2.sheet.actor.character.akd-border-color-active :is(
+  .tab[data-tab="details"],
+  .tab[data-tab="inventory"],
+  .tab[data-tab="features"],
+  .tab[data-tab="spells"],
+  .tab[data-tab="effects"]
+) .card {
+  border-color: var(--akd-border-color);
+}
+
+/* filigree-box (Skills/Saving Throws/Tools) isn't a .card at all, so the rule above
+   can't reach it - it exposes its own analogous hook instead (dnd5e.mjs:63753,
+   --filigree-border-color, falls back to --dnd5e-color-gold natively). */
+.dnd5e2.sheet.actor.character.akd-border-color-active .tab[data-tab="details"] filigree-box {
+  --filigree-border-color: var(--akd-border-color);
+}
+
+/* Combined with the alpha slider (color-mix against --akd-header-alpha), same as the
+   native two-stop gradient it replaces - just one flat color instead of two. */
+.dnd5e2.sheet.actor.character.akd-header-color-active :is(
+  .tab[data-tab="inventory"],
+  .tab[data-tab="features"],
+  .tab[data-tab="spells"],
+  .tab[data-tab="effects"]
+) .card .header {
+  background: color-mix(in srgb, var(--akd-header-color) var(--akd-header-alpha, 100%), transparent);
+}
+
+/* Skills/Saving Throws/Tools have no .header div at all natively - confirmed against
+   the installed client source (dnd5e.mjs:63696-63774, FiligreeBoxElement): its <h3>
+   title is actually slotted light-DOM content, not sealed inside the closed shadow
+   root (only the .backdrop/border decorations are), so it's directly selectable and
+   currently has no background of its own (dnd5e.css:3820-3829). Giving it one here
+   makes these three panels' titles pick up the header color/alpha the same way every
+   other card's .header already does. */
+.dnd5e2.sheet.actor.character.akd-header-color-active .tab[data-tab="details"] filigree-box > h3 {
+  background: color-mix(in srgb, var(--akd-header-color) var(--akd-header-alpha, 100%), transparent);
+  /* Trimmed inward from the panel's true edge so the ornate gold filigree frame
+     decorations (dnd5e.mjs:63751-63773) read as a distinct band around it - the
+     now-exposed gap shows .backdrop (z-index:-2, already tracking
+     --filigree-background-color/item-alpha) through underneath, not a separate layer.
+     A plain rectangle reaching this close needs a diagonal corner cut too, or its
+     square corners poke into the decorations' territory the same way an early
+     iteration of this rule overshot the panel's own 12px chamfer.
+
+     Safety invariant: side inset + top inset + corner-trim size must sum to more than
+     12 (the panel's own chamfer) - the two trimmed corner points then always land on a
+     line parallel to (and outside) the panel's chamfer line, regardless of how the
+     three values are individually tuned. Currently 11 + 5 + 6 = 22. */
+  clip-path: polygon(
+    17px 5px, calc(100% - 17px) 5px,
+    calc(100% - 11px) 11px, calc(100% - 11px) 100%,
+    11px 100%, 11px 11px
+  );
+}

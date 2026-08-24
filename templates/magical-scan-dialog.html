@@ -1,0 +1,18 @@
+<div class="akd-magical-scan-dialog">
+  <h2>A Knights Dream Properties — Magical Item Scan</h2>
+  <p>Scan for weapons/equipment marked magical that have no Blessed, Cursed, Enchantment, or Imbued
+    effect explaining why.</p>
+  <div class="form-group">
+    <label for="scan-source">Source</label>
+    <select id="scan-source" name="scan-source">
+      <option value="world">World Items</option>
+      {{#each packs}}
+      <option value="{{this.id}}">{{this.label}}</option>
+      {{/each}}
+    </select>
+  </div>
+  <div class="form-group">
+    <button type="button" id="run-scan" class="btn">Scan Now</button>
+  </div>
+  <div id="scan-results"></div>
+</div>

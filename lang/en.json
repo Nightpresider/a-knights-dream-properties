@@ -1,0 +1,72 @@
+{
+  "TYPES": {
+    "ActiveEffect": {
+      "a-knights-dream-properties": {
+        "blessed": "Blessed",
+        "cursed": "Cursed",
+        "imbued": "Imbued"
+      }
+    }
+  },
+  "AKDP": {
+    "CreatureTypeBlend": {
+      "Legend": "Creature Type Blend",
+      "Total": "Total: {pct}%",
+      "Apply": "Apply",
+      "CustomTypeLabel": "Custom Type",
+      "CustomTypePlaceholder": "e.g. Half-Djinn",
+      "NoFeaturesGranted": "No features granted yet"
+    },
+    "CreatureTypeImages": {
+      "Title": "Creature Type Images",
+      "MenuName": "Creature Type Images",
+      "MenuLabel": "Configure Images",
+      "MenuHint": "Override the image used for any creature type in the percentage-blend UI."
+    },
+    "ClassBackgrounds": {
+      "Title": "Class Backgrounds",
+      "MenuName": "Class Backgrounds",
+      "MenuLabel": "Configure Images",
+      "MenuHint": "Assign a header banner and body texture per class - a character's sheet blends these once every class they have is fully configured.",
+      "HeaderPlaceholder": "Header banner image",
+      "BodyPlaceholder": "Body texture image"
+    },
+    "ClassImagePicker": {
+      "Legend": "Character Sheet Background",
+      "Auto": "Automatic (match class)",
+      "Default": "Default",
+      "Custom": "Custom image",
+      "CustomPlaceholder": "Path: 800 x 170 image",
+      "NoCustomPath": "Choose a custom image first."
+    },
+    "PanelTransparency": {
+      "Legend": "Panel Transparency",
+      "Headers": "Headers",
+      "Items": "Panels",
+      "Save": "Save Transparency",
+      "Reset": "Reset to Default",
+      "HeaderColor": "Header color",
+      "BorderColor": "Border color"
+    },
+    "ADVANCEMENT": {
+      "CreatureBlendGrant": {
+        "Title": "Creature Blend Grant",
+        "Hint": "Automatically grants item(s) once a creature type reaches a percentage threshold in the actor's Creature Type Blend.",
+        "Details": "Blend Threshold",
+        "DropHint": "Drag items here to grant them once the threshold is reached.",
+        "FIELDS": {
+          "creatureType": {
+            "label": "Creature Type"
+          },
+          "threshold": {
+            "label": "Threshold",
+            "hint": "Percentage of the blend this type must reach for the items below to be granted."
+          },
+          "items": {
+            "label": "Items to Grant"
+          }
+        }
+      }
+    }
+  }
+}

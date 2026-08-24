@@ -1,0 +1,28 @@
+<fieldset class="card items table">
+    <legend>{{ localize "AKDP.ADVANCEMENT.CreatureBlendGrant.FIELDS.items.label" }}</legend>
+    <div class="header">
+        <div class="item-name name-header">{{ localize "DOCUMENT.Item" }}</div>
+    </div>
+    <ol class="items-list unlist">
+        {{#each items}}
+        <li class="item flexrow" data-item-uuid="{{ data.uuid }}">
+            <div class="item-name">
+                {{{ dnd5e-linkForUuid data.uuid renderBroken=true }}}
+                <input type="hidden" name="configuration.items.{{ @index }}.uuid" value="{{ data.uuid }}">
+            </div>
+            <div class="item-controls flexrow">
+                {{#if @root.editable}}
+                <a class="item-control item-action" data-action="deleteItem" data-tooltip
+                   aria-label="{{ localize 'DND5E.ItemDelete' }}">
+                    <i class="fas fa-trash" inert></i>
+                </a>
+                {{/if}}
+            </div>
+        </li>
+        {{/each}}
+    </ol>
+
+    <div class="form-group">
+        <p class="hint centered drop-area">{{ localize "AKDP.ADVANCEMENT.CreatureBlendGrant.DropHint" }}</p>
+    </div>
+</fieldset>
