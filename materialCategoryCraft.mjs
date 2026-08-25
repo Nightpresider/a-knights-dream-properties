@@ -5,6 +5,9 @@ const MODULE_ID = "a-knights-dream-properties";
 const LEGACY_NAMESPACE = "moduleid";
 const CATEGORY_FIELD = "materialCategory";
 const CRAFT_FIELD = "materialCraft";
+// dnd5e's native "Silvered" property - separate key from this module's own "silver"
+// material-craft key. See syncSilveredProperty() below.
+const SILVERED_KEY = "sil";
 const EXTERNAL_MATERIAL_DATA = "modules/a-knights-dream/files/material-data-source.json";
 const CATEGORY_LABELS = {
   Metals: "Metal",
@@ -443,6 +446,10 @@ async function onRenderItemSheet(app, html) {
     if (!current.craft || current.craft !== craft) await item.setFlag(MODULE_ID, CRAFT_FIELD, craft);
   }
 
+  // Self-heals "sil" on every sheet open, not just on flag change - covers items that
+  // already had Material Craft set to Silver before this existed.
+  await syncSilveredProperty(item, craft || null);
+
   const controlsHtml = renderMaterialControls(html, category, craft, categories, categoryMap);
   const inserted = insertMaterialControls(html, item, controlsHtml);
   if (!inserted) {
@@ -493,7 +500,7 @@ async function onRenderItemSheet(app, html) {
   const propertyNameEls = html.querySelectorAll(`[name^="${PROPERTY_PREFIX}"]`);
   for (const nameEl of propertyNameEls) {
     const key = nameEl.getAttribute("name").slice(PROPERTY_PREFIX.length);
-    if (!materialKeys.has(key)) continue;
+    if (!materialKeys.has(key) && key !== SILVERED_KEY) continue;
     (nameEl.closest(".checkbox") || nameEl).remove();
     removedCount++;
   }
@@ -524,6 +531,20 @@ async function syncMaterialProperty(item, materialKeys, newKey) {
   if (changed) await item.update({ "system.properties": [...updated] });
 }
 
+// "sil" isn't one of this module's material-craft keys, so the sync above never touches
+// it - keeps it a pure derivative of Material Craft instead of a separate checkbox.
+async function syncSilveredProperty(item, craftKey) {
+  if (!item.isOwner) return;
+  const current = item.system?.properties;
+  if (!current || typeof current.has !== "function") return;
+  const shouldBeSilvered = craftKey === "silver";
+  if (current.has(SILVERED_KEY) === shouldBeSilvered) return;
+  const updated = new Set(current);
+  if (shouldBeSilvered) updated.add(SILVERED_KEY);
+  else updated.delete(SILVERED_KEY);
+  await item.update({ "system.properties": [...updated] });
+}
+
 // Keep the item's real `system.properties` set (which drives dnd5e's own rules, e.g. resistance
 // bypass for Adamantine) in sync whenever the Material Craft flag changes, whether that happens via
 // auto-detection on render or the user picking a new option from the dropdown.
@@ -535,6 +556,7 @@ Hooks.on("updateItem", async (item, changes) => {
   const definitions = buildMaterialDefinitions(materialData);
   const materialKeys = new Set(definitions.map(def => def.key));
   await syncMaterialProperty(item, materialKeys, newCraft || null);
+  await syncSilveredProperty(item, newCraft || null);
 });
 
 Hooks.on("renderItemSheet", onRenderItemSheet);

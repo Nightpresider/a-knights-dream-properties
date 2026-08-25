@@ -1,14 +1,19 @@
 // A Knights Dream Properties - creatureBlendAdvancement.mjs
 // Compatible with: Foundry VTT 14+, DND5E system
 //
-// A custom Advancement type for Race items ("Creature Blend Grant") that grants/revokes Feature
-// item(s) once a creature type reaches a percentage threshold in the actor's Creature Type Blend
-// (see creatureTypeBlend.mjs), instead of the usual character-level gating. Modeled on dnd5e's own
-// ItemGrantAdvancement, but apply()/reverse() persist directly instead of using updateSource():
-// ItemGrantAdvancement can get away with in-memory staging because it always runs through
-// AdvancementManager against an actor clone that gets diffed-and-committed at the end of the
-// level-up/item-drop wizard. This advancement is triggered reactively by the blend-flag hooks below,
-// with no wizard ever committing on its behalf, so it has to persist for real every time.
+// Two ways to gate a Race item's grants on Creature Type Blend % (see creatureTypeBlend.mjs):
+//   1. A custom Advancement type ("Creature Blend Grant") with its own threshold field. Modeled on
+//      dnd5e's own ItemGrantAdvancement, but apply()/reverse() persist directly instead of using
+//      updateSource(): ItemGrantAdvancement can get away with in-memory staging because it always
+//      runs through AdvancementManager against an actor clone that gets diffed-and-committed at the
+//      end of the level-up/item-drop wizard. This type is triggered reactively by the blend-flag
+//      hooks below instead, with no wizard ever committing on its behalf, so it persists for real.
+//   2. Any native advancement type (Item Grant, ASI, Trait, etc.), by repurposing the shared Level
+//      dropdown as a % threshold - Race items only, Class/Subclass left untouched. See the
+//      "Native advancement types" section below.
+//
+// Race stays a native singleton (one per actor) - each race item is its own complete, self-
+// contained package.
 
 const MODULE_ID = "a-knights-dream-properties";
 const FLAG_NS = MODULE_ID;
@@ -153,7 +158,77 @@ Hooks.once("init", () => {
     documentClass: AKDCreatureBlendGrantAdvancement,
     validItemTypes: new Set(["race"])
   };
+
+  // Gate native advancements' Level field for blend-tagged Race entries (see below); every other
+  // advancement calls straight through to the original getter, unmodified.
+  const proto = dnd5e.documents.advancement.Advancement.prototype;
+  const nativeAppliesToClass = Object.getOwnPropertyDescriptor(proto, "appliesToClass").get;
+  Object.defineProperty(proto, "appliesToClass", {
+    configurable: true,
+    get() {
+      const type = this.flags?.[MODULE_ID]?.creatureType;
+      if (this.item?.type !== "race" || !(this.level > 0) || !type) return nativeAppliesToClass.call(this);
+      const pct = Math.round((this.level / CONFIG.DND5E.maxLevel) * 100);
+      const blend = this.item.getFlag(MODULE_ID, "creatureTypeBlend");
+      const current = type === "custom" ? (blend?.custom?.percent ?? 0) : (blend?.types?.[type] ?? 0);
+      // Also true once already granted-but-now-under-threshold, so a reverse step can still be built.
+      return (current >= pct) || this.configuredForLevel(this.level);
+    }
+  });
 });
+
+// ── Native advancement types: Level → % (Race items only) ──────────────────────
+// dnd5e's Level dropdown is shared by every advancement-config window, Class/Subclass included, so
+// this is a pure post-render DOM patch (never a subclass/override of that shared window) gated on
+// item type - Class/Subclass config windows are unaffected. Tiers reuse levels 5/10/15/20 as
+// 25/50/75/100%; level 0 keeps its native meaning, "Any Level" (ungated, fires immediately).
+
+const PERCENT_LEVELS = { 5: 25, 10: 50, 15: 75, 20: 100 };
+
+function onRenderAdvancementConfig(app, html) {
+  if (app.item?.type !== "race") return;
+  const root = app.element instanceof HTMLElement ? app.element : (html?.[0] ?? html);
+  const levelSelect = root?.querySelector('select[name="level"]');
+  if (!levelSelect || levelSelect.dataset.akdPercent) return;
+  levelSelect.dataset.akdPercent = "true";
+
+  for (const option of [...levelSelect.options]) {
+    const value = Number(option.value);
+    if (value === 0) continue; // native "Any Level" label stays
+    if (value in PERCENT_LEVELS) option.textContent = `${PERCENT_LEVELS[value]}%`;
+    else option.remove();
+  }
+
+  injectCreatureTypeField(levelSelect.closest(".form-group"), app.advancement);
+}
+
+/** Adds a Creature Type <select> right after the Level field, storing to advancement.flags. */
+function injectCreatureTypeField(levelFormGroup, advancement) {
+  if (!levelFormGroup || levelFormGroup.nextElementSibling?.dataset.akdCreatureTypeField !== undefined) return;
+
+  const current = advancement.flags?.[MODULE_ID]?.creatureType ?? "";
+  const options = Object.entries(CONFIG.DND5E.creatureTypes)
+    .map(([value, { label }]) => `<option value="${value}" ${value === current ? "selected" : ""}>${game.i18n.localize(label)}</option>`)
+    .join("");
+
+  levelFormGroup.insertAdjacentHTML("afterend", `
+    <div class="form-group" data-akd-creature-type-field>
+      <label>${game.i18n.localize("AKDP.ADVANCEMENT.CreatureTypeField.Label")}</label>
+      <div class="form-fields">
+        <select data-akd-creature-type>
+          <option value="">-</option>
+          ${options}
+          <option value="custom" ${current === "custom" ? "selected" : ""}>${game.i18n.localize("AKDP.CreatureTypeBlend.CustomTypeLabel")}</option>
+        </select>
+      </div>
+    </div>`);
+
+  levelFormGroup.nextElementSibling.querySelector("[data-akd-creature-type]").addEventListener("change", event => {
+    advancement.update({ [`flags.${MODULE_ID}.creatureType`]: event.target.value || null });
+  });
+}
+
+Hooks.on("renderAdvancementConfig", onRenderAdvancementConfig);
 
 /**
  * Re-evaluate every Creature Blend Grant advancement on a race item against its current blend flag.
@@ -169,11 +244,48 @@ function evaluateBlend(item, blend) {
   }
 }
 
+/**
+ * Re-evaluate every blend-tagged native advancement on a race item, via dnd5e's own AdvancementManager
+ * (cloned actor, automaticApplication so only genuinely choice-requiring steps show a wizard page).
+ * Reversal never needs a wizard page - forward() handles it unconditionally before any automatic-
+ * application check, same as dnd5e's own level-down handling.
+ */
+function evaluateNativeBlendAdvancements(item, blend) {
+  const actor = item.actor;
+  if (!actor?.system.metadata?.supportsAdvancement || game.settings.get("dnd5e", "disableAdvancements")) return;
+
+  const manager = new dnd5e.applications.advancement.AdvancementManager(actor, { automaticApplication: true });
+  const clonedItem = manager.clone.items.get(item.id);
+  const decisions = new Map(); // level -> Map(advancementId -> "forward"|"reverse")
+
+  for (const advancement of clonedItem.system.advancement ?? []) {
+    const type = advancement.flags?.[MODULE_ID]?.creatureType;
+    if (!(advancement.level > 0) || !type) continue;
+    const pct = Math.round((advancement.level / CONFIG.DND5E.maxLevel) * 100);
+    const current = type === "custom" ? (blend?.custom?.percent ?? 0) : (blend?.types?.[type] ?? 0);
+    const meets = current >= pct, already = advancement.configuredForLevel(advancement.level);
+    if (meets === already) continue;
+    const byLevel = decisions.get(advancement.level) ?? decisions.set(advancement.level, new Map()).get(advancement.level);
+    byLevel.set(advancement.id, meets ? "forward" : "reverse");
+  }
+  if (!decisions.size) return;
+
+  for (const [level, byId] of [...decisions].sort(([a], [b]) => a - b)) {
+    for (const flow of dnd5e.applications.advancement.AdvancementManager.flowsForLevel(clonedItem, level)) {
+      const type = byId.get(flow.advancement.id);
+      if (type) manager.steps.push({ type, flow });
+    }
+  }
+  if (manager.steps.length) manager.render(true);
+}
+
 Hooks.on("updateItem", (item, changes) => {
   if (item.type !== "race" || !item.isOwner) return;
   const blend = foundry.utils.getProperty(changes, `flags.${FLAG_NS}.creatureTypeBlend`);
   if (blend === undefined) return;
-  evaluateBlend(item, item.getFlag(FLAG_NS, "creatureTypeBlend"));
+  const resolved = item.getFlag(FLAG_NS, "creatureTypeBlend");
+  evaluateBlend(item, resolved);
+  evaluateNativeBlendAdvancements(item, resolved);
 });
 
 Hooks.on("createItem", (item) => {
@@ -189,5 +301,8 @@ Hooks.on("createItem", (item) => {
       blend = orphaned;
     }
   }
-  if (blend) evaluateBlend(item, blend);
+  if (blend) {
+    evaluateBlend(item, blend);
+    evaluateNativeBlendAdvancements(item, blend);
+  }
 });

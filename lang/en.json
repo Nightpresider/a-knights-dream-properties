@@ -1,4 +1,10 @@
 {
+  "DND5E": {
+    "CreatureTypeTitle": "Configure Race Ancestry",
+    "Species": {
+      "Add": "Add Race"
+    }
+  },
   "TYPES": {
     "ActiveEffect": {
       "a-knights-dream-properties": {
@@ -6,6 +12,10 @@
         "cursed": "Cursed",
         "imbued": "Imbued"
       }
+    },
+    "Item": {
+      "race": "Race",
+      "racePl": "Races"
     }
   },
   "AKDP": {
@@ -15,7 +25,8 @@
       "Apply": "Apply",
       "CustomTypeLabel": "Custom Type",
       "CustomTypePlaceholder": "e.g. Half-Djinn",
-      "NoFeaturesGranted": "No features granted yet"
+      "NoFeaturesGranted": "No features granted yet",
+      "DeterminedByRace": "Species determined by race"
     },
     "CreatureTypeImages": {
       "Title": "Creature Type Images",
@@ -48,7 +59,13 @@
       "HeaderColor": "Header color",
       "BorderColor": "Border color"
     },
+    "ItemHeaderBackground": {
+      "Pick": "Pick a header background image"
+    },
     "ADVANCEMENT": {
+      "CreatureTypeField": {
+        "Label": "Creature Type Blend Gate"
+      },
       "CreatureBlendGrant": {
         "Title": "Creature Blend Grant",
         "Hint": "Automatically grants item(s) once a creature type reaches a percentage threshold in the actor's Creature Type Blend.",

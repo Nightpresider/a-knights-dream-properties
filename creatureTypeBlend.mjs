@@ -1,7 +1,7 @@
 // A Knights Dream Properties - creatureTypeBlend.mjs
 // Compatible with: Foundry VTT 14+, DND5E system
 //
-// Four features live in this one file (grown from one, kept together since it's the file
+// Five features live in this one file (grown from one, kept together since it's the file
 // confirmed to load reliably - see the Class Background Blend section below):
 //   1. CREATURE TYPE BLEND - overhauls dnd5e's native "Creature Type" config dialog into a
 //      percentage blend (e.g. "50% Fey / 50% Humanoid"), driving threshold-gated item grants
@@ -12,6 +12,9 @@
 //      (auto/pick-a-class/custom), injected into Foundry's native Configure Sheet dialog.
 //   4. PANEL TRANSPARENCY - sliders + color pickers (same dialog) controlling how see-through
 //      the sheet's section panels are and what color their headers/borders use.
+//   5. ITEM HEADER BACKGROUNDS - a GM-picked image spanning the top of a Race or Background
+//      item's own sheet, via a gear icon shown next to the name in edit mode; the same image
+//      also fills that item's pill on the actor sheet.
 //
 // File layout follows this same order: shared helpers, then each feature as its own banner-
 // delimited section (dialog/hook logic together, in the order a reader would touch them).
@@ -36,11 +39,15 @@ function ensureHTMLElement(html) {
 
 function grantedFeatureNamesForType(raceItem, typeKey) {
   if (!raceItem) return [];
-  const advancements = raceItem.system.advancement?.filter(a => a.type === "AKDCreatureBlendGrant") ?? [];
   const names = [];
-  for (const advancement of advancements) {
-    if (advancement.configuration.creatureType !== typeKey) continue;
-    for (const id of Object.keys(advancement.value.added ?? {})) {
+  for (const advancement of raceItem.system.advancement ?? []) {
+    // Two sources of a granted feature: the custom Creature Blend Grant type (own creatureType
+    // field), or any native advancement tagged via the Level-as-% mechanism (creatureBlendAdvancement.mjs).
+    const type = advancement.type === "AKDCreatureBlendGrant"
+      ? advancement.configuration.creatureType
+      : advancement.flags?.[MODULE_ID]?.creatureType;
+    if (type !== typeKey) continue;
+    for (const id of Object.keys(advancement.value?.added ?? {})) {
       const item = raceItem.actor?.items.get(id);
       if (item) names.push(item.name);
     }
@@ -241,13 +248,19 @@ function wireBlendListeners(root, doc, keyPath) {
   });
 }
 
-/** Explicitly rebuild an actor's creature-type pill, independent of whether its sheet auto-rerendered. */
+/** Explicitly rebuild an actor's creature-type (and, for characters, race/background portrait)
+ *  pills, independent of whether its sheet auto-rerendered. */
 function refreshActorTypePill(actor) {
   if (!actor?.sheet?.rendered) return;
   const el = actor.sheet.element instanceof HTMLElement ? actor.sheet.element : ensureHTMLElement(actor.sheet.element);
   if (!el) return;
-  if (actor.type === "character") rebuildCharacterTypePill(el, actor);
-  else if (actor.type === "npc") rebuildNPCTypePill(el, actor);
+  if (actor.type === "character") {
+    rebuildCharacterTypePill(el, actor);
+    rebuildRacePortraitPill(el, actor);
+    rebuildBackgroundPortraitPill(el, actor);
+  } else if (actor.type === "npc") {
+    rebuildNPCTypePill(el, actor);
+  }
 }
 
 function onRenderCreatureTypeConfig(app, html) {
@@ -291,10 +304,25 @@ function rebuildCharacterTypePill(el, actor) {
   if (!pill) return;
 
   pill.querySelector(".akd-blend-segments")?.remove();
-  pill.classList.remove("akd-blend-active");
+  pill.querySelector(".akd-type-placeholder-text")?.remove();
+  pill.classList.remove("akd-blend-active", "akd-type-placeholder");
   pill.querySelectorAll(":scope > .gold-icon, :scope > .name").forEach(node => node.style.removeProperty("display"));
 
   const { raceItem, nonzero } = resolveBlend(actor);
+
+  // No race item at all - dnd5e's own "humanoid" schema default (CharacterData#prepareEmbeddedData)
+  // has nothing real behind it yet. Show a neutral placeholder instead, matching the "Add Race"/
+  // "Add Background" empty-state pills already shown just below this one.
+  if (!raceItem) {
+    pill.classList.add("akd-type-placeholder");
+    pill.querySelectorAll(":scope > .gold-icon, :scope > .name").forEach(node => node.style.display = "none");
+    const placeholder = document.createElement("span");
+    placeholder.className = "akd-type-placeholder-text roboto-upper";
+    placeholder.textContent = game.i18n.localize("AKDP.CreatureTypeBlend.DeterminedByRace");
+    pill.appendChild(placeholder);
+    return;
+  }
+
   // No blend flag at all (this feature has never been used on this actor) - leave dnd5e's
   // native rendering alone. Any actual blend, even a single type at 100%, uses our own
   // rendering instead of the native icon+name pill, so a module-overridden image always shows.
@@ -303,6 +331,48 @@ function rebuildCharacterTypePill(el, actor) {
   pill.classList.add("akd-blend-active");
   pill.querySelectorAll(":scope > .gold-icon, :scope > .name").forEach(node => node.style.display = "none");
   pill.appendChild(buildBlendSegments(nonzero, raceItem));
+}
+
+// ── Character actor sheet: .pills-lg .pill-lg.race/.background (full-bleed portrait) ────
+// Same "image fills the whole pill, name/controls float on top" treatment as the
+// type/Ancestry pill above - one image, no blend segments needed. Reads the SAME
+// itemHeaderBackground flag as that item's own sheet header (Item Header Backgrounds
+// section, below) rather than the item's native .img - these pills are wide and short, a
+// much better fit for that wide banner image than the item's own small square portrait crop.
+// Leaves the native small icon+name pill alone until that flag is actually set. Shared by
+// both the Race and Background pills - only the selector/details-key differ.
+
+function rebuildItemPortraitPill(el, actor, { pillSelector, detailsKey }) {
+  const pill = el.querySelector(pillSelector);
+  if (!pill) return;
+
+  pill.querySelector(".akd-item-portrait")?.remove();
+  pill.classList.remove("akd-item-portrait-active");
+  pill.querySelectorAll(":scope > .gold-icon").forEach(node => node.style.removeProperty("display"));
+
+  const item = actor.system.details?.[detailsKey] instanceof Item ? actor.system.details[detailsKey] : null;
+  const bgImage = item?.getFlag(MODULE_ID, ITEM_HEADER_BG_FLAG);
+  if (!bgImage) return;
+
+  pill.classList.add("akd-item-portrait-active");
+  pill.querySelectorAll(":scope > .gold-icon").forEach(node => node.style.display = "none");
+  // A real appended child, not ::before - dnd5e's own .pill-lg::before AND
+  // .pill-lg.texture::before are both already claimed (opacity/blend-mode overlay, then a
+  // gradient), at higher specificity than anything scoped to just our own marker class could
+  // beat; .pill-lg.texture.race/.background also paint their own decorative art directly on
+  // the pill. A real child paints above all of that, same as .akd-blend-segments.
+  const portrait = document.createElement("div");
+  portrait.className = "akd-item-portrait";
+  portrait.style.backgroundImage = `url('${bgImage}')`;
+  pill.appendChild(portrait);
+}
+
+function rebuildRacePortraitPill(el, actor) {
+  rebuildItemPortraitPill(el, actor, { pillSelector: ".pills-lg .pill-lg.race", detailsKey: "race" });
+}
+
+function rebuildBackgroundPortraitPill(el, actor) {
+  rebuildItemPortraitPill(el, actor, { pillSelector: ".pills-lg .pill-lg.background", detailsKey: "background" });
 }
 
 // ── NPC actor sheet: li.creature-type (plain button + label span, no icon) ──────
@@ -357,7 +427,13 @@ function registerBlendPillHooks() {
     });
   }
 
-  const REBUILDERS = { character: rebuildCharacterTypePill, npc: rebuildNPCTypePill };
+  function rebuildCharacterPills(el, actor) {
+    rebuildCharacterTypePill(el, actor);
+    rebuildRacePortraitPill(el, actor);
+    rebuildBackgroundPortraitPill(el, actor);
+  }
+
+  const REBUILDERS = { character: rebuildCharacterPills, npc: rebuildNPCTypePill };
 
   for (const [actorType, sheets] of Object.entries(CONFIG.Actor?.sheetClasses ?? {})) {
     const rebuild = REBUILDERS[actorType];
@@ -389,15 +465,15 @@ Hooks.once("ready", registerBlendPillHooks);
 // Resolution order per class identifier:
 //   1. World-setting override (settings menu) - escape hatch for a file outside the
 //      folder, or separate header/body images.
-//   2. assets/class-backgrounds/class_<identifier>.webp, used for both header and
-//      body - edit/replace directly, no settings step required (the expected workflow).
+//   2. assets/class/class_<identifier>.webp, used for both header and body - edit/replace
+//      directly, no settings step required (the expected workflow).
 // Most classes have no file yet (unlike creature types, which all start with one), so
 // (2) needs a real existence check rather than an unconditional path - the assets
 // folder is scanned once via FilePicker at "ready" and cached for synchronous lookup.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const CLASS_BG_SETTING_KEY = "classBackgroundImages";
-const CLASS_BG_ASSETS_PATH = `modules/${MODULE_ID}/assets/class-backgrounds`;
+const CLASS_BG_ASSETS_PATH = `modules/${MODULE_ID}/assets/class`;
 
 const STANDARD_CLASS_IDENTIFIERS = [
   "artificer", "barbarian", "bard", "cleric", "druid", "fighter",
@@ -427,7 +503,7 @@ async function scanClassBackgroundFiles() {
         .filter(Boolean)
     );
   } catch (err) {
-    console.warn(`${MODULE_ID} | Could not scan class-backgrounds assets folder`, err);
+    console.warn(`${MODULE_ID} | Could not scan class assets folder`, err);
   }
 }
 
@@ -1102,3 +1178,115 @@ function refreshClassBackground(actor) {
   applyClassBackground(el, actor);
   applyPanelTransparency(el, actor);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Item Header Backgrounds (Race, Background)
+//
+// A GM-picked image spanning the top of a Race or Background item's own sheet (dnd5e's
+// item-sheet header has no native background there to override - unlike the actor sheet's
+// header, there's no existing --dnd5e-* variable for this, so this paints its own layer).
+// Separate from the item's own native portrait image (.left > .document-image, untouched)
+// since this slot wants a wider, more atmospheric image than a face-focused portrait crop -
+// the matching actor-sheet pill (Creature Type Blend section above) reads this same flag for
+// exactly that reason. Race and Background share every bit of this - only the item type
+// differs - so it's written once, parameterized by ITEM_HEADER_BG_TYPES.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const ITEM_HEADER_BG_FLAG = "itemHeaderBackground";
+const ITEM_HEADER_BG_TYPES = ["race", "background"];
+
+function pickItemHeaderBackground(item) {
+  const FilePickerImpl = foundry.applications.apps.FilePicker.implementation;
+  new FilePickerImpl({
+    type: "image",
+    current: item.getFlag(MODULE_ID, ITEM_HEADER_BG_FLAG) ?? "",
+    callback: async path => {
+      await item.setFlag(MODULE_ID, ITEM_HEADER_BG_FLAG, path);
+      // Don't rely on the actor sheet auto-re-rendering off an embedded item's flag change -
+      // explicitly refresh its pill too, same reasoning as refreshActorTypePill's own callers.
+      refreshActorTypePill(item.actor);
+    }
+  }).render(true);
+}
+
+function applyItemHeaderBackground(el, item) {
+  el.querySelector(":scope > .akd-item-header-bg")?.remove();
+  el.querySelector(".akd-item-header-bg-button")?.remove();
+  el.classList.remove("akd-header-bg-active");
+  if (!ITEM_HEADER_BG_TYPES.includes(item.type)) return;
+
+  // Native template renders .document-name as an <input> when editable, else a plain <div> -
+  // reuse that instead of re-deriving edit-mode/permission logic.
+  const identity = el.querySelector(".sheet-header .identity-info");
+  const nameEl = identity?.querySelector(".document-name");
+  const editable = nameEl?.tagName === "INPUT";
+  if (identity && nameEl && editable) {
+    identity.style.position = "relative";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "akd-item-header-bg-button unbutton";
+    button.dataset.tooltip = game.i18n.localize("AKDP.ItemHeaderBackground.Pick");
+    button.innerHTML = `<i class="fas fa-cog"></i>`;
+    button.addEventListener("click", () => pickItemHeaderBackground(item));
+    identity.appendChild(button);
+
+    // .identity-info spans the full sheet-header height (flex:1, space-evenly with the
+    // subtitles row below) - top:4px would anchor to THAT tall box, not to the name itself.
+    // Measure the name's actual vertical center instead, so the button lines up with it
+    // regardless of whether subtitles are present/how tall they are.
+    const nameRect = nameEl.getBoundingClientRect();
+    const identityRect = identity.getBoundingClientRect();
+    button.style.top = `${nameRect.top - identityRect.top + nameRect.height / 2}px`;
+  }
+
+  const path = item.getFlag(MODULE_ID, ITEM_HEADER_BG_FLAG);
+  if (!path) return;
+
+  // Spans from the very top of the window down through the tab nav (Description/Details/
+  // Advancement) - .window-header and .window-content are siblings under this root element,
+  // so reaching behind both means living here, appended LAST so it paints above
+  // .window-content's own opaque background (--dnd5e-color-parchment covers the sheet's full
+  // height, including the tab content below - behind it would just get fully hidden). Height
+  // is measured, not hardcoded - window-header/tab-nav heights aren't exposed as CSS variables
+  // the way --dnd5e-sheet-header-height is. The CSS side lifts .window-header/.sheet-header/
+  // nav.tabs back above this layer (position+z-index) so all native chrome stays visible/
+  // clickable on top of it - only the space behind them shows the image.
+  const navTabs = el.querySelector("nav.tabs");
+  const height = navTabs ? navTabs.getBoundingClientRect().bottom - el.getBoundingClientRect().top : 170;
+
+  el.classList.add("akd-header-bg-active");
+  const bg = document.createElement("div");
+  bg.className = "akd-item-header-bg";
+  bg.style.backgroundImage = `url('${path}')`;
+  bg.style.height = `${height}px`;
+  el.appendChild(bg);
+}
+
+function registerItemHeaderBackgroundHooks() {
+  const seen = new Set();
+
+  function register(cls) {
+    const name = cls?.name;
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    Hooks.on(`render${name}`, (app, html) => {
+      const item = app.document;
+      if (!(item instanceof Item) || !ITEM_HEADER_BG_TYPES.includes(item.type)) return;
+      if (item.sheet !== app) return;
+      const el = app.element instanceof HTMLElement ? app.element : ensureHTMLElement(html);
+      if (el) applyItemHeaderBackground(el, item);
+    });
+  }
+
+  for (const itemType of ITEM_HEADER_BG_TYPES) {
+    for (const sheets of Object.values(CONFIG.Item?.sheetClasses?.[itemType] ?? {})) {
+      let cls = sheets.cls;
+      while (cls && cls.prototype) {
+        register(cls);
+        cls = Object.getPrototypeOf(cls);
+      }
+    }
+  }
+}
+
+Hooks.once("ready", registerItemHeaderBackgroundHooks);

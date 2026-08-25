@@ -235,6 +235,62 @@
   border-radius: 50%;
 }
 
+/* Raceless placeholder ("Species determined by race") - native pill chrome/sizing stays,
+   just the icon+name swapped for muted text. */
+.pill-lg.akd-type-placeholder .akd-type-placeholder-text {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* ── Character actor sheet: .pills-lg .pill-lg.race / .pill-lg.background ─────
+   Same full-bleed treatment as the type/Ancestry pill above - the item's own
+   portrait fills the whole pill (a real appended .akd-item-portrait child, NOT
+   ::before/::after - dnd5e's own .pill-lg::before and .pill-lg.texture::before
+   are both already claimed at higher specificity than anything scoped to just
+   our own class could beat, and .pill-lg.texture.race/.background also paint
+   their own decorative art directly on the pill - a real child paints above
+   all of that, same as .akd-blend-segments already does), name/size-select/
+   delete float on top with a gradient + text-shadow for legibility over an
+   arbitrary image. Shared by both the Race and Background pills. */
+
+.pill-lg.akd-item-portrait-active {
+  position: relative;
+  flex: 1 1 auto;
+  padding: 0;
+  overflow: hidden;
+}
+
+.pill-lg.akd-item-portrait-active .akd-item-portrait {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: top;
+}
+
+.pill-lg.akd-item-portrait-active .akd-item-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 40%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+.pill-lg.akd-item-portrait-active .name-stacked {
+  position: relative;
+  z-index: 1;
+  margin-inline-start: auto;
+  padding-inline: 8px;
+  text-align: right;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.pill-lg.akd-item-portrait-active .config-button {
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+}
+
 /* ── NPC actor sheet: li.creature-type button ──────────────────────────────────
    No native icon/pill chrome here - just a small button with a label and a gear
    icon. Segments fill the whole button edge-to-edge the same way, with the gear
@@ -744,4 +800,63 @@ li.creature-type.akd-blend-active button i.fa-cog {
     calc(100% - 11px) 11px, calc(100% - 11px) 100%,
     11px 100%, 11px 11px
   );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Item Header Backgrounds (Race, Background)
+   Spans the whole top of the window (window-header down through the tab nav),
+   not just the name column - .window-header and .window-content are siblings,
+   so this lives as a direct child of the shared root, appended last so it
+   paints above .window-content's own opaque background. Native chrome
+   (window-header's buttons, the sheet-header portrait/name, the tab nav) is
+   lifted back above it via position+z-index so it all stays visible/clickable -
+   only the space behind them shows the image through.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dnd5e2.sheet.item .akd-item-header-bg {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: top;
+  border-radius: 5px 5px 0 0;
+  pointer-events: none;
+}
+
+.dnd5e2.sheet.item .akd-item-header-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.6));
+}
+
+.dnd5e2.sheet.item.akd-header-bg-active .window-header,
+.dnd5e2.sheet.item.akd-header-bg-active .sheet-header,
+.dnd5e2.sheet.item.akd-header-bg-active nav.tabs {
+  position: relative;
+  z-index: 1;
+}
+
+.dnd5e2.sheet.item.akd-header-bg-active .sheet-header .document-name,
+.dnd5e2.sheet.item.akd-header-bg-active .sheet-header .subtitles,
+.dnd5e2.sheet.item.akd-header-bg-active nav.tabs .item {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* top is set inline (JS-measured against the name's actual position - see
+   applyItemHeaderBackground); transform centers the button ON that point rather than
+   anchoring its own top edge there. */
+.akd-item-header-bg-button {
+  position: absolute;
+  z-index: 2;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  color: var(--dnd5e-color-gold);
 }

@@ -5,9 +5,9 @@
 // (creatureTypeBlend.mjs's segments). Resolution order:
 //   1. An explicit world-setting override (set via the "Creature Type Images" settings menu) -
 //      an escape hatch for pointing at a file outside the assets folder below.
-//   2. modules/a-knights-dream-properties/assets/creature-type-blends/<key>.webp - edit/replace
-//      that file directly and it's picked up with NO settings-menu step required. This is the
-//      primary, expected workflow: every creature type already has a starting file there.
+//   2. modules/a-knights-dream-properties/assets/ancestry/<key>.webp - edit/replace that file
+//      directly and it's picked up with NO settings-menu step required. This is the primary,
+//      expected workflow: every creature type already has a starting file there.
 //   3. The native CONFIG.DND5E.creatureTypes icon, for a type with neither of the above.
 // There's no way to synchronously check whether the assets-folder file actually exists from
 // client JS without an async request, so (2) is used unconditionally once (1) is absent - a
@@ -17,7 +17,7 @@
 
 const MODULE_ID = "a-knights-dream-properties";
 const SETTING_KEY = "creatureTypeImageOverrides";
-const ASSETS_PATH = `modules/${MODULE_ID}/assets/creature-type-blends`;
+const ASSETS_PATH = `modules/${MODULE_ID}/assets/ancestry`;
 
 export function getCreatureTypeIcon(key) {
   const overrides = game.settings.get(MODULE_ID, SETTING_KEY) ?? {};
@@ -84,8 +84,8 @@ class AKDCreatureTypeImagesConfig extends FormApplication {
       const input = row?.querySelector(`input[name="${key}"]`);
       const preview = row?.querySelector("img");
       // Clear the override entirely (not "set it to the current default path") so this type
-      // goes back to following assets/creature-type-blends/<key>.webp automatically, including
-      // any future edits to that file - pinning it to today's resolved path would defeat that.
+      // goes back to following assets/ancestry/<key>.webp automatically, including any future
+      // edits to that file - pinning it to today's resolved path would defeat that.
       if (input) input.value = "";
       const fallback = getCreatureTypeIcon(key);
       if (preview) preview.src = fallback;
