@@ -16,6 +16,33 @@
   width: 100%;
 }
 
+.akd-pocket-fields {
+  margin-top: 0.5rem;
+}
+
+.akd-pocket-field {
+  margin-bottom: 0.5rem;
+}
+
+.akd-pocket-field label {
+  display: block;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.akd-pocket-type-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+
+.akd-pocket-type-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 400;
+}
+
 @keyframes akd-pulse-warning {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 60, 60, 0.75); }
   50% { box-shadow: 0 0 0 6px rgba(255, 60, 60, 0); }
@@ -24,4 +51,381 @@
 .akd-pulse-warning {
   animation: akd-pulse-warning 1.4s ease-in-out infinite;
   border-radius: 4px;
+}
+
+/* rollBreakdown.mjs - per-roll modifier breakdown on attack/damage chat cards */
+.akd-roll-breakdown {
+  margin-top: 0.35rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--color-border-light-tertiary, rgba(0, 0, 0, 0.2));
+  font-size: 0.85em;
+}
+
+.akd-roll-breakdown summary {
+  cursor: pointer;
+  color: var(--text-color, inherit);
+  opacity: 0.75;
+}
+
+.akd-roll-breakdown[open] summary {
+  opacity: 1;
+}
+
+.akd-roll-breakdown ul {
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.akd-roll-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.1rem 0;
+}
+
+.akd-roll-breakdown-value {
+  font-weight: 600;
+}
+
+/* damageTypeCardColors.mjs - damage-type name becomes a hover-only label over the total.
+   :has(.label:not(:empty)) scopes this out of attack rolls, which reuse the same template with
+   an empty label - unscoped, an empty hover box appeared over the attack's own modifiers. */
+.dice-tooltip .tooltip-part .total:has(.label:not(:empty)) {
+  position: relative;
+}
+
+.dice-tooltip .tooltip-part .total .label:not(:empty) {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  border-radius: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 1;
+}
+
+.dice-tooltip .tooltip-part .total:has(.label:not(:empty)):hover .label {
+  opacity: 1;
+}
+
+.dice-tooltip .tooltip-part .total:has(.label:not(:empty)):hover .value {
+  opacity: 0;
+}
+
+/* Recolored icon replacing dnd5e's near-invisible opacity:0.1 watermark. --akd-icon-size is a
+   global slider (damageTypeCardColors.mjs), not per-type like color. */
+.dice-tooltip .tooltip-part .total .akd-damage-type-icon {
+  display: inline-flex;
+  width: var(--akd-icon-size, 1.1em);
+  height: var(--akd-icon-size, 1.1em);
+  opacity: 0.9;
+}
+
+.dice-tooltip .tooltip-part .total .akd-damage-type-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Actor sheet Inventory tab's weapon-row damage icon (damageTypeCardColors.mjs's
+   applyInventoryIconStyling) - a background watermark behind the formula text. Both placed in
+   the same CSS Grid cell so they overlap without either influencing the other's size; the row's
+   own height comes purely from the formula text (an ordinary in-flow grid item) - the icon must
+   NOT be sized via a CSS percentage/stretch off that same auto-height row, since that creates a
+   circular dependency that runs away to a huge size. applyInventoryIconStyling instead measures
+   the formula text's rendered pixel height in JS and sets --icon-height/--icon-width from that
+   directly, per row. Higher specificity than dnd5e's own ".row { display: flex }" rule (one
+   extra class) so this reliably overrides it. */
+.dnd5e2 .items-section .item .item-formula .row.akd-inventory-formula-row {
+  display: grid;
+}
+
+.akd-inventory-formula-row > * {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.akd-inventory-formula-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.akd-inventory-formula-icon-wrap dnd5e-icon {
+  --icon-size: 2em; /* fallback if JS measurement ever comes back 0 (e.g. hidden ancestor) */
+}
+
+.akd-inventory-formula-row .formula {
+  position: relative;
+  z-index: 1;
+}
+
+/* midi-qol's aggregate icon (one per distinct type, in the card's totals header) is briefly a
+   <dnd5e-icon> before applyCollapsedTypeBadges replaces it with a plain <svg> - this only
+   matters for that brief window. */
+dnd5e-icon.midi-damage-type-icon {
+  --icon-size: var(--akd-icon-size, 1.1em);
+}
+
+/* dnd5e's own collapsed grand-total number (e.g. "9") shares a container with the aggregate
+   type icon next to it - flexing keeps them vertically centered against each other as either
+   grows, and scales the number with the same Icon Size slider. */
+.dice-result .dice-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: var(--akd-icon-size, 1.1em);
+}
+
+/* Resets font-size back to a fixed baseline for the badge wrapper, which sizes itself in em
+   units off the same variable - without this it would compound with the line above. */
+.dice-result .dice-total .akd-collapsed-badge-wrapper {
+  font-size: 1rem;
+}
+
+/* Single damage type: the icon sits centered behind the (single, native) total number instead
+   of beside a small duplicate-value badge - showing the value once instead of twice. */
+.dice-result .dice-total.akd-single-damage-total {
+  position: relative;
+}
+
+.dice-result .dice-total.akd-single-damage-total .akd-single-damage-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2.2em;
+  height: 2.2em;
+  opacity: 0.5;
+}
+
+.dice-result .dice-total.akd-single-damage-total .akd-total-number {
+  position: relative;
+  z-index: 1;
+}
+
+/* Per-type value badge overlaid on midi-qol's always-visible aggregate type icon - replaced
+   with a plain inline <svg> (applyCollapsedTypeBadges), same as the per-row icons, after
+   attempts to center a badge against the original <dnd5e-icon> element proved unreliable. */
+.akd-collapsed-badge-wrapper {
+  position: relative;
+  display: inline-flex;
+  width: var(--akd-icon-size, 1.1em);
+  height: var(--akd-icon-size, 1.1em);
+  opacity: 0.9;
+}
+
+.akd-collapsed-badge-wrapper svg {
+  width: 100%;
+  height: 100%;
+}
+
+.akd-collapsed-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--akd-badge-font-size, 0.55em);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--akd-badge-color, #fff);
+  opacity: var(--akd-badge-opacity, 0.7);
+  /* Offset shadows in each direction + a soft blur = a real outline, not just stacked glow. */
+  text-shadow:
+    -1px -1px 1.5px #000,
+     1px -1px 1.5px #000,
+    -1px  1px 1.5px #000,
+     1px  1px 1.5px #000,
+     0    0   2px   #000;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Hovering an individual die/modifier reveals its source (weapon/spell name, "Ability Modifier",
+   or a custom effect label) - same hover-swap pattern as the damage-type total above. */
+.dice-tooltip .tooltip-part .dice-rolls li {
+  position: relative;
+}
+
+.dice-tooltip .tooltip-part .dice-rolls li:has(.akd-term-source):hover {
+  color: transparent;
+}
+
+.dice-tooltip .tooltip-part .dice-rolls li .akd-term-source {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1px 4px;
+  font-size: 0.65em;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.9);
+  border-radius: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 2;
+}
+
+.dice-tooltip .tooltip-part .dice-rolls li:hover .akd-term-source {
+  opacity: 1;
+}
+
+/* Hovering a target's calculated damage on the Apply Damage tray shows raw-to-adjusted math
+   per affected type. */
+.calculated.damage.akd-has-damage-math {
+  position: relative;
+  cursor: help;
+}
+
+.calculated.damage.akd-has-damage-math .akd-damage-math {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;
+  padding: 3px 6px;
+  font-size: 0.65em;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.9);
+  border-radius: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 3;
+}
+
+.calculated.damage.akd-has-damage-math:hover .akd-damage-math {
+  opacity: 1;
+}
+
+/* Hide Damage on a Miss. !important to beat dnd5e's own .dice-roll specificity. */
+.akd-damage-hidden-on-miss {
+  display: none !important;
+}
+
+/* Damage Type Card Colors settings window - dark tone matching chat cards, so a picked color
+   reads accurately instead of against Foundry's default light/parchment background. */
+#akd-card-colors .window-content {
+  background: #1b1b1b;
+  color: #ddd;
+}
+
+.akd-card-colors .hint,
+.akd-card-colors label,
+.akd-card-colors legend,
+.akd-slider-value {
+  color: #ddd;
+}
+
+.akd-card-colors .hint {
+  margin-bottom: 0.5rem;
+}
+
+.akd-card-colors-display {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border-light-tertiary, rgba(0, 0, 0, 0.3));
+  border-radius: 4px;
+}
+
+.akd-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.akd-slider-row label {
+  flex: 0 0 8rem;
+}
+
+/* min-width:0 overrides the range input's intrinsic default width, which flexbox otherwise
+   respects as a floor even with flex:1. */
+.akd-slider-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.akd-slider-value {
+  flex: 0 0 2.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Uniform square reset buttons across every row. */
+.akd-card-colors [data-action="reset-color"],
+.akd-card-colors [data-action="reset-display"] {
+  flex: 0 0 1.75rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.akd-card-colors-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.akd-card-colors-row label {
+  flex: 1;
+}
+
+/* The icon IS the swatch - clicks forward to a visually-hidden (but still real/keyboard-
+   operable) <input type="color">, and its own --icon-fill updates live as that input changes.
+   Sized from --akd-icon-size so it also previews the actual in-use icon size. */
+.akd-card-colors-swatch {
+  width: calc(var(--akd-icon-size, 1.1em) + 0.75rem);
+  height: calc(var(--akd-icon-size, 1.1em) + 0.75rem);
+  padding: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  /* Used by the overlay-number-color row, which has no icon - its swatch shows a "#" glyph. */
+  font-size: var(--akd-icon-size, 1.1em);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.akd-card-colors-swatch svg {
+  width: var(--akd-icon-size, 1.1em);
+  height: var(--akd-icon-size, 1.1em);
+}
+
+.akd-card-colors-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  overflow: hidden;
 }

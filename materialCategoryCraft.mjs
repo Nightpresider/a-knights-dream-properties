@@ -1,6 +1,8 @@
 // A Knights Dream Properties - materialCategoryCraft.mjs
 // Compatible with: Foundry VTT 14+, DND5E system
 // Module: a-knights-dream-properties
+
+// -- Constants --------------------------------------------------------------------------------
 const MODULE_ID = "a-knights-dream-properties";
 const LEGACY_NAMESPACE = "moduleid";
 const CATEGORY_FIELD = "materialCategory";
@@ -19,6 +21,7 @@ const CATEGORY_LABELS = {
   Leatherwork: "Leather"
 };
 
+// -- Material data catalog (fallback when EXTERNAL_MATERIAL_DATA isn't reachable) -------------
 const DEFAULT_MATERIAL_DATA = {
   categories: {
     Metals: { weightFactor: 1.0 },
@@ -155,6 +158,7 @@ const DEFAULT_MATERIAL_DATA = {
   ]
 };
 
+// -- Setup / property registration -------------------------------------------------------------
 const materialDataPromise = fetchMaterialData();
 
 const MATERIAL_PROPERTY_TYPES = ["weapon", "equipment", "loot", "container", "tool"];
@@ -171,9 +175,9 @@ Hooks.once("init", () => {
 // working localize() here we can't detect the collision and would register a useless duplicate
 // "adamantine" key alongside the real one dnd5e's rules engine actually reads.
 Hooks.once("ready", () => {
-  // Register every material from material-data-source.json (mirrored below in DEFAULT_MATERIAL_DATA)
-  // as a valid item property. This used to be done piecemeal by a world script; this module is now
-  // the single source of truth for material property keys, so it no longer depends on that script.
+  // Registers every material from material-data-source.json (mirrored below in
+  // DEFAULT_MATERIAL_DATA) as a valid item property - this module is the single source of truth
+  // for material property keys.
   const existingLabels = new Set();
   for (const prop of Object.values(CONFIG.DND5E.itemProperties || {})) {
     if (!prop?.label) continue;
@@ -189,6 +193,7 @@ Hooks.once("ready", () => {
   }
 });
 
+// -- Data loading / small helpers ---------------------------------------------------------------
 async function fetchMaterialData() {
   try {
     const response = await fetch(EXTERNAL_MATERIAL_DATA);
@@ -211,6 +216,7 @@ function propertyLabel(key, fallback) {
   return rawLabel ? game.i18n.localize(rawLabel) : fallback;
 }
 
+// -- Material definitions / lookup --------------------------------------------------------------
 function buildMaterialDefinitions(materialData) {
   const labelToKey = new Map();
   for (const [key, prop] of Object.entries(CONFIG.DND5E.itemProperties || {})) {
@@ -313,6 +319,7 @@ async function migrateMaterialFlags(item, definitions) {
   return { category, craft };
 }
 
+// -- DOM rendering / insertion -------------------------------------------------------------------
 function renderMaterialControls(html, category, craft, categories, categoryMap) {
   const categoryOptions = [""].concat([...categories]).map(value => {
     if (!value) return `<option value="" ${!category ? "selected" : ""}>Automatic</option>`;
@@ -372,6 +379,17 @@ function findInsertPoint(html, item) {
       || groups[0];
   }
 
+  if (item.type === "container") {
+    // containerTypeConfig.mjs inserts its own "Container Type" field first (loads earlier in
+    // module.json, so its render hook always runs before this one on the same render pass) -
+    // anchoring after it keeps Container Type / Material Category / Material Craft in one
+    // predictable order, ahead of the raw properties fieldset this file strips checkboxes from
+    // below. Falls back to the fieldset itself if that field isn't there for some reason.
+    return detailsTab.querySelector('[data-akd-container-type-field]')
+      || detailsTab.querySelector("fieldset")
+      || detailsTab.querySelector('.form-group');
+  }
+
   const equipmentGroup = detailsTab.querySelector('.form-group.stacked.equipment-properties')
     || detailsTab.querySelector('.form-group.stacked');
   return equipmentGroup || detailsTab.querySelector('.form-group');
@@ -403,13 +421,14 @@ function updateCraftControlState(html, category, categoryMap) {
   }
 }
 
+// -- Item sheet render hook -----------------------------------------------------------------------
 async function onRenderItemSheet(app, html) {
   // ApplicationV2 sheets render in independent parts (header, tabs, footer, ...) and fire this
   // hook once per part, so `html` may only be a small fragment (e.g. the mode-slider toggle).
   // app.element is always the full, current sheet regardless of which part just re-rendered.
   html = app.element instanceof HTMLElement ? app.element : ensureHTMLElement(html);
   const item = app.document;
-  if (!["weapon", "equipment"].includes(item.type)) return;
+  if (!["weapon", "equipment", "container"].includes(item.type)) return;
   if (html.querySelector('.akd-material-fields')) return; // already inserted by an earlier part render
 
   const materialData = await materialDataPromise;
@@ -445,6 +464,13 @@ async function onRenderItemSheet(app, html) {
     if (!current.category || current.category !== category) await item.setFlag(MODULE_ID, CATEGORY_FIELD, category);
     if (!current.craft || current.craft !== craft) await item.setFlag(MODULE_ID, CRAFT_FIELD, craft);
   }
+
+  // Self-heals a material's own property key (e.g. "coldiron", "ada") on every sheet open, not
+  // just on flag change - covers items whose Material Craft flag was already set (by import, an
+  // earlier session, or before that material's property key existed) and so never went through
+  // an actual flag CHANGE, which is the only thing that triggers the updateItem-hook sync below.
+  const knownMaterialKeys = new Set(definitions.map(def => def.key));
+  await syncMaterialProperty(item, knownMaterialKeys, craft || null);
 
   // Self-heals "sil" on every sheet open, not just on flag change - covers items that
   // already had Material Craft set to Silver before this existed.
@@ -512,6 +538,7 @@ async function onRenderItemSheet(app, html) {
   }
 }
 
+// -- Property sync (system.properties) -------------------------------------------------------------
 async function syncMaterialProperty(item, materialKeys, newKey) {
   if (!item.isOwner) return;
   const current = item.system?.properties;
@@ -551,7 +578,7 @@ async function syncSilveredProperty(item, craftKey) {
 Hooks.on("updateItem", async (item, changes) => {
   const newCraft = foundry.utils.getProperty(changes, `flags.${MODULE_ID}.${CRAFT_FIELD}`);
   if (newCraft === undefined) return;
-  if (!["weapon", "equipment"].includes(item.type)) return;
+  if (!["weapon", "equipment", "container"].includes(item.type)) return;
   const materialData = await materialDataPromise;
   const definitions = buildMaterialDefinitions(materialData);
   const materialKeys = new Set(definitions.map(def => def.key));
@@ -559,6 +586,7 @@ Hooks.on("updateItem", async (item, changes) => {
   await syncSilveredProperty(item, newCraft || null);
 });
 
+// -- Hook registration --------------------------------------------------------------------------
 Hooks.on("renderItemSheet", onRenderItemSheet);
 Hooks.on("renderItemSheet5e", onRenderItemSheet);
 
@@ -568,29 +596,25 @@ Hooks.once("ready", () => {
   console.log(`[${MODULE_ID}] materialCategoryCraft loaded and ready.`);
 });
 
-  // Bulk migration helper: expose a function to scan world items and set material flags when detected in the item name.
-  async function migrateAllMaterials() {
-    const materialData = await materialDataPromise;
-    const definitions = buildMaterialDefinitions(materialData);
-    if (!definitions.length) return ui.notifications?.warn("[a-knights-dream-properties] No material definitions available for migration.");
-    let changed = 0;
-    const items = (game.items && game.items.contents) ? game.items.contents : [];
-    for (const item of items) {
-      if (!["weapon", "equipment"].includes(item.type)) continue;
-      const curr = getCurrentMaterialFlags(item);
-      if (curr.category && curr.craft) continue;
-      const nameMatch = findMaterialFromName(item.name, definitions);
-      if (nameMatch) {
-        await item.setFlag(MODULE_ID, CATEGORY_FIELD, nameMatch.category);
-        await item.setFlag(MODULE_ID, CRAFT_FIELD, nameMatch.key);
-        changed++;
-      }
+// -- Bulk migration helper -----------------------------------------------------------------------
+// Scans world items and sets material flags when a material name is detected in the item's name.
+async function migrateAllMaterials() {
+  const materialData = await materialDataPromise;
+  const definitions = buildMaterialDefinitions(materialData);
+  if (!definitions.length) return ui.notifications?.warn("[a-knights-dream-properties] No material definitions available for migration.");
+  let changed = 0;
+  const items = (game.items && game.items.contents) ? game.items.contents : [];
+  for (const item of items) {
+    if (!["weapon", "equipment", "container"].includes(item.type)) continue;
+    const curr = getCurrentMaterialFlags(item);
+    if (curr.category && curr.craft) continue;
+    const nameMatch = findMaterialFromName(item.name, definitions);
+    if (nameMatch) {
+      await item.setFlag(MODULE_ID, CATEGORY_FIELD, nameMatch.category);
+      await item.setFlag(MODULE_ID, CRAFT_FIELD, nameMatch.key);
+      changed++;
     }
-    ui.notifications?.info(`[a-knights-dream-properties] Material migration applied to ${changed} items.`);
-    return changed;
   }
-
-  Hooks.once("ready", () => {
-    window.aKDProperties = window.aKDProperties || {};
-    window.aKDProperties.migrateAllMaterials = migrateAllMaterials;
-  });
+  ui.notifications?.info(`[a-knights-dream-properties] Material migration applied to ${changed} items.`);
+  return changed;
+}

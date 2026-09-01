@@ -62,6 +62,30 @@
     "ItemHeaderBackground": {
       "Pick": "Pick a header background image"
     },
+    "CardColors": {
+      "Title": "Damage Type Card Colors",
+      "MenuName": "Damage Type Card Colors",
+      "MenuLabel": "Configure Colors",
+      "MenuHint": "Choose the icon color for each damage type shown on attack/damage chat cards. The damage type name itself is shown as a hover tooltip instead of permanent text.",
+      "Saved": "Damage type card colors saved.",
+      "HideDamageOnMiss": {
+        "Name": "Hide Damage on a Miss",
+        "Hint": "dnd5e/midi-qol pre-roll damage even when an attack misses. Choose whether that damage is hidden on the card when the attack didn't land.",
+        "Off": "Off - always show",
+        "Players": "Hide from players (GM still sees it)",
+        "All": "Hide from everyone"
+      }
+    },
+    "RollBreakdown": {
+      "Summary": "Roll Breakdown",
+      "ModeName": "Roll Breakdown Display",
+      "ModeHint": "Controls the per-roll modifier breakdown on attack/damage chat cards (e.g. why an attack is +3, or what made up a damage total). \"Player Choice\" lets each player decide via their own Show Roll Breakdown setting below.",
+      "ModeChoice": "Player Choice",
+      "ModeOn": "Always On",
+      "ModeOff": "Always Off",
+      "ClientName": "Show Roll Breakdown",
+      "ClientHint": "Show the modifier breakdown on attack/damage chat cards, when the world's Roll Breakdown Display setting is set to Player Choice."
+    },
     "ADVANCEMENT": {
       "CreatureTypeField": {
         "Label": "Creature Type Blend Gate"

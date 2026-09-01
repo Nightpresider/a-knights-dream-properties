@@ -1,0 +1,87 @@
+<form class="akd-card-colors" autocomplete="off">
+  <p class="hint">Click a damage type's icon to pick its color - the icon itself previews the
+    change live. Reset any row to bring back its default.</p>
+
+  <fieldset class="akd-card-colors-display">
+    <legend>Display</legend>
+
+    <div class="akd-slider-row">
+      <label>Icon Size</label>
+      <input type="range" name="_iconSize" data-display-key="icon-size"
+             min="0.5" max="2.7" step="0.1" value="{{display.iconSize}}">
+      <span class="akd-slider-value">{{display.iconSize}}</span>
+      <button type="button" data-action="reset-display" data-reset-key="_iconSize" title="Reset to default">
+        <i class="fas fa-undo"></i>
+      </button>
+    </div>
+
+    <div class="akd-slider-row">
+      <label>Overlay Number Size</label>
+      <input type="range" name="_badgeFontSize" data-display-key="badge-font-size"
+             min="0.3" max="2.1" step="0.05" value="{{display.badgeFontSize}}">
+      <span class="akd-slider-value">{{display.badgeFontSize}}</span>
+      <button type="button" data-action="reset-display" data-reset-key="_badgeFontSize" title="Reset to default">
+        <i class="fas fa-undo"></i>
+      </button>
+    </div>
+
+    <div class="akd-slider-row">
+      <label>Overlay Number Opacity</label>
+      <input type="range" name="_badgeOpacity" data-display-key="badge-opacity"
+             min="0" max="1" step="0.05" value="{{display.badgeOpacity}}">
+      <span class="akd-slider-value">{{display.badgeOpacity}}</span>
+      <button type="button" data-action="reset-display" data-reset-key="_badgeOpacity" title="Reset to default">
+        <i class="fas fa-undo"></i>
+      </button>
+    </div>
+
+    <div class="akd-card-colors-row">
+      <label>Overlay Number Color</label>
+      <button type="button" class="akd-card-colors-swatch"
+              aria-label="Pick a color for the overlay number"></button>
+      <input type="color" name="_badgeColor" value="{{display.badgeColor}}" class="akd-card-colors-input" tabindex="-1">
+      <button type="button" data-action="reset-display" data-reset-key="_badgeColor" title="Reset to default">
+        <i class="fas fa-undo"></i>
+      </button>
+    </div>
+  </fieldset>
+
+  <fieldset class="akd-card-colors-display">
+    <legend>Inventory Weapon Damage Icon</legend>
+    <p class="hint">The damage-type icon shown in front of a weapon's damage formula on the
+      character sheet's Inventory tab.</p>
+
+    <div class="akd-slider-row">
+      <label>Icon Opacity</label>
+      <input type="range" name="_inventoryIconOpacity" data-display-key="inventory-icon-opacity"
+             min="0" max="1" step="0.05" value="{{display.inventoryIconOpacity}}">
+      <span class="akd-slider-value">{{display.inventoryIconOpacity}}</span>
+      <button type="button" data-action="reset-display" data-reset-key="_inventoryIconOpacity" title="Reset to default">
+        <i class="fas fa-undo"></i>
+      </button>
+    </div>
+
+    <div class="akd-card-colors-row">
+      <label>Use Custom Colors</label>
+      <input type="checkbox" name="_inventoryIconColorEnabled" data-dtype="Boolean"
+             {{#if display.inventoryIconColorEnabled}}checked{{/if}}>
+    </div>
+  </fieldset>
+
+  <ol class="akd-card-colors-list unlist">
+    {{#each types}}
+    <li class="akd-card-colors-row" data-type-key="{{key}}">
+      <label>{{label}}</label>
+      <button type="button" class="akd-card-colors-swatch" data-icon-src="{{icon}}"
+              aria-label="Pick a color for {{label}}"></button>
+      <input type="color" name="{{key}}" value="{{color}}" class="akd-card-colors-input" tabindex="-1">
+      <button type="button" data-action="reset-color" title="Reset to default">
+        <i class="fas fa-undo"></i>
+      </button>
+    </li>
+    {{/each}}
+  </ol>
+  <footer class="sheet-footer form-group">
+    <button type="submit"><i class="fas fa-save"></i> Save Changes</button>
+  </footer>
+</form>

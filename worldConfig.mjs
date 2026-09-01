@@ -1,9 +1,8 @@
 // A Knights Dream Properties - worldConfig.mjs
 // Compatible with: Foundry VTT 14+, DND5E system
 //
-// Migrated from the "Before the Fog" world script TESTaKnightsWeaponProperties.js so this
-// configuration lives with the rest of a-knights-dream-properties instead of the world. The
-// world script has been retired; a-knights-dream stays a pure content/compendium module.
+// Lives here (not as a world script) so a-knights-dream itself stays a pure content/compendium
+// module.
 
 Hooks.once("init", () => {
   // -- Creature types -----------------------------------------------------------------------
@@ -359,11 +358,9 @@ Hooks.once("init", () => {
   CONFIG.DND5E.featureTypes.consum = CONFIG.DND5E.consumableTypes.liquid;
 
   // -- Poison/consumable properties (creature-type specialized) -----------------------------
-  // The original world script's registration loop for these was broken (referenced undefined
-  // variables, threw on every load) - only the design notes in comments survived. Registering
-  // the properties themselves here; the "effective against / heals" creature-type relationships
-  // from those notes are exposed as data on CONFIG.AKD_POISON_TYPES for later use, but no
-  // mechanical damage/healing behavior is wired up - that was never actually implemented before.
+  // Registers the properties themselves; the "effective against / heals" creature-type
+  // relationships are exposed as data on CONFIG.AKD_POISON_TYPES for later use, but no
+  // mechanical damage/healing behavior is wired up yet.
   const POISON_TYPES = {
     neutralitatis: { label: "Neutralitatis", effectiveAgainst: ["aberration", "monstrosity", "ooze"], heals: ["avain", "fish"] },
     faunatear: { label: "Faunatear", effectiveAgainst: ["beast", "giant", "humanoid"], heals: ["spirit", "undead"] },

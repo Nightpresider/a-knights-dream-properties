@@ -8,6 +8,8 @@
     "esmodules": [
         "weaponPropMJS.mjs",
         "armorPropMJS.mjs",
+        "pocketConfig.mjs",
+        "containerTypeConfig.mjs",
         "additionalEnrichers.mjs",
         "languageCorrection.mjs",
         "actorprop.mjs",
@@ -16,7 +18,10 @@
         "magicalEffects.mjs",
         "creatureBlendAdvancement.mjs",
         "creatureTypeImages.mjs",
-        "creatureTypeBlend.mjs"
+        "creatureTypeBlend.mjs",
+        "materialEffects.mjs",
+        "rollBreakdown.mjs",
+        "damageTypeCardColors.mjs"
     ],
     "styles": [
         "itemPropStyles.css",

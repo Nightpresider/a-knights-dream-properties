@@ -1,8 +1,7 @@
 // A Knights Dream Properties - creatureTypeBlend.mjs
 // Compatible with: Foundry VTT 14+, DND5E system
 //
-// Five features live in this one file (grown from one, kept together since it's the file
-// confirmed to load reliably - see the Class Background Blend section below):
+// Five features live in this one file:
 //   1. CREATURE TYPE BLEND - overhauls dnd5e's native "Creature Type" config dialog into a
 //      percentage blend (e.g. "50% Fey / 50% Humanoid"), driving threshold-gated item grants
 //      (creatureBlendAdvancement.mjs) and a proportional multi-segment pill on the sheet.
@@ -715,21 +714,11 @@ function classImagePickerHtml(actor) {
     </fieldset>`;
 }
 
-// Selecting ANY option (a class thumbnail, Auto, or the custom-image radio) saves
-// immediately - there's no separate Save button for this fieldset anymore, only the
-// native "Save Sheet Configuration" button at the bottom of the dialog remains, and it
-// only ever handles the native This Sheet/Theme fields. A 3-second countdown overlay on
-// whatever was just selected is the only feedback that the choice was actually saved.
-//
-// Wiring this off each radio's "click" event, not "change", for two reasons: (1) typing
-// in the text field, or using the file-picker button (which only sets .checked = true
-// via script), never dispatches any event on the radio itself - only a real, direct
-// click on the pip does, so filling in a custom path never auto-saves by itself - the
-// user still has to actually click the pip afterward. (2) "change"
-// specifically would NOT fire if that radio was already the checked one (e.g. custom
-// mode was saved previously, dialog reopened, user edits the path and re-clicks the
-// same already-checked pip to save the update) - a real click always fires regardless
-// of prior checked state, so re-saving an update this way still works.
+// Selecting ANY option saves immediately (a 3-second countdown overlay is the only save
+// feedback) - the native "Save Sheet Configuration" button only handles the dialog's own
+// This Sheet/Theme fields. Wired off each radio's "click", not "change": setting .checked via
+// the file-picker button doesn't dispatch "change", and "change" wouldn't fire anyway when
+// re-clicking an already-checked radio to save an edited custom path - "click" fires either way.
 function wireClassImagePicker(fieldset, actor) {
   fieldset.querySelector(".akd-custom-pick")?.addEventListener("click", () => {
     const input = fieldset.querySelector(".akd-custom-path");
@@ -769,8 +758,7 @@ function wireClassImagePicker(fieldset, actor) {
 
       // Replace, don't merge - setFlag alone deep-merges object-valued flags, which would
       // leave a stale classKey/customPath from a previous selection sitting alongside the
-      // new mode (the same stale-key bug this module already hit once with the creature
-      // type blend flag - see resolveBlend's -=key deletion elsewhere in this file).
+      // new mode.
       await actor.unsetFlag(MODULE_ID, ACTOR_IMAGE_SELECTION_FLAG);
       await actor.setFlag(MODULE_ID, ACTOR_IMAGE_SELECTION_FLAG, update);
       refreshClassBackground(actor);

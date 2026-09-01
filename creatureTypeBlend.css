@@ -650,35 +650,8 @@ li.creature-type.akd-blend-active button i.fa-cog {
   gap: 0.5rem;
 }
 
-/* ── Panel transparency effect (the actor sheet itself) ──────────────────────────
-   --akd-header-alpha / --akd-item-alpha are set (as percentage strings, e.g. "60%")
-   on the sheet root element by creatureTypeBlend.mjs's applyPanelTransparency(), from
-   a per-actor flag set via the two sliders above. Default 100% (fully opaque) - every
-   rule below is a no-op until a player actually moves a slider. Deliberately targets
-   background-color alpha via color-mix(), never element opacity, so text/icons/meter
-   bars stay fully readable regardless of slider position. Scoped to Details/Inventory/
-   Features/Spells/Effects - Biography is the only tab left untouched.
-
-   Mapped directly against the installed dnd5e.css (see file comments for exact line
-   numbers where relevant) - there is no single shared "background" variable, so each
-   distinct source gets its own override:
-     - .card .header: the colored section title bars (Inventory/Features/Spells/Effects -
-       Skills/Saving Throws/Tools have no separate header layer at all, see below).
-     - .card: the generic card body (covers the encumbrance card - and so the
-       STR/SIZE/MULTIPLIER row within it, which has no background of its own - each
-       items-section card, the spellcasting summary card, and the Effects tab's
-       Passive/Inactive/Unavailable/Conditions cards).
-     - item-list-controls search / .filter-element search: the "Search inventory" /
-       "Search effects" bar.
-     - .inventory-element .middle .attunement: the attunement count pill (Inventory/
-       Spells only).
-     - .items-section .item .item-description .item-summary: an item's expanded
-       description panel (Inventory/Features/Spells).
-     - filigree-box (Details only): Skills/Saving Throws/Tools are a CLOSED shadow-root
-       custom element - no external selector can reach its internal .backdrop directly.
-       Its only override hook is --filigree-background-color, a custom property that
-       does inherit through the shadow boundary. There's no separate header there to
-       distinguish, so only the items slider affects this one. */
+/* ── Actor Sheet Panel transparency  ──────────────────────────
+ */
 
 :is(
   .dnd5e2.sheet.actor.character .tab[data-tab="inventory"],
@@ -727,24 +700,12 @@ li.creature-type.akd-blend-active button i.fa-cog {
   background: color-mix(in srgb, var(--item-summary-background) var(--akd-item-alpha, 100%), transparent);
 }
 
-/* --dnd5e-color-card (the shadow root's own internal fallback) is a constant near-white
-   (#f8f4f1, no dark-theme override anywhere in dnd5e.css) - using it here produced the
-   "whitening" look. --dnd5e-background-card is what every other card on the sheet
-   actually uses (resolves to the dark blue-gray-2 in dark theme, matching the rule
-   above) - explicitly setting --filigree-background-color from that instead keeps this
-   panel visually consistent with all the others. */
+/* --dnd5e-color-card ( shadow root fallback ) */
 .dnd5e2.sheet.actor.character .tab[data-tab="details"] filigree-box {
   --filigree-background-color: color-mix(in srgb, var(--dnd5e-background-card) var(--akd-item-alpha, 100%), transparent);
 }
 
-/* ── Custom header/border colors (optional, off by default) ──────────────────────
-   --akd-header-color / --akd-border-color are only ever set - and their marker
-   classes (.akd-header-color-active / .akd-border-color-active) only ever added - once
-   a player actually picks a color in the Panel Transparency fieldset
-   (applyPanelTransparency in creatureTypeBlend.mjs). Native dnd5e.css is completely
-   untouched until then. Reassigning --dnd5e-border-gold or the header gradient
-   variables directly was avoided because both are shared by other native chrome (the
-   outer window frame, for one) that nobody asked to recolor. */
+/* ── Custom header/border colors*/
 
 .dnd5e2.sheet.actor.character.akd-border-color-active :is(
   .tab[data-tab="details"],
@@ -774,13 +735,7 @@ li.creature-type.akd-blend-active button i.fa-cog {
   background: color-mix(in srgb, var(--akd-header-color) var(--akd-header-alpha, 100%), transparent);
 }
 
-/* Skills/Saving Throws/Tools have no .header div at all natively - confirmed against
-   the installed client source (dnd5e.mjs:63696-63774, FiligreeBoxElement): its <h3>
-   title is actually slotted light-DOM content, not sealed inside the closed shadow
-   root (only the .backdrop/border decorations are), so it's directly selectable and
-   currently has no background of its own (dnd5e.css:3820-3829). Giving it one here
-   makes these three panels' titles pick up the header color/alpha the same way every
-   other card's .header already does. */
+/* Skills/Saving Throws/Tools*/
 .dnd5e2.sheet.actor.character.akd-header-color-active .tab[data-tab="details"] filigree-box > h3 {
   background: color-mix(in srgb, var(--akd-header-color) var(--akd-header-alpha, 100%), transparent);
   /* Trimmed inward from the panel's true edge so the ornate gold filigree frame

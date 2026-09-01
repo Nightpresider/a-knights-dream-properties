@@ -26,32 +26,19 @@ function onRenderItemSheet(app) {
     // Equipment (shields) — a magic weapon can ignore its hand slot too.
     CONFIG.DND5E.validProperties.weapon?.add("ignoresHandSlot");
 
+    // dnd5e's own native "Two-Handed" property (key "two") - normally weapon-only.
+    // Registering it onto consumable too gets a free native Two-Handed checkbox on
+    // potion/scroll/wand/etc. sheets, for Armor Weight Class's hand-slot system (a
+    // "heavy" consumable that should collapse both hands, like a two-handed weapon).
+    CONFIG.DND5E.validProperties.consumable?.add("two");
+
+    // Registering "pocketed" onto container too lets a genuine dnd5e Container (backpack,
+    // pouch, vial) become a pocket carrier itself, same as an equipment shield/belt already can.
+    CONFIG.DND5E.validProperties.container?.add("pocketed");
+
     if (item.type !== "equipment") return;
     // Material category/craft UI moved to materialCategoryCraft.mjs.
 }
 
 Hooks.on("renderItemSheet", onRenderItemSheet);
 Hooks.on("renderItemSheet5e", onRenderItemSheet);
-/**The way Foundry's data architecture works
-//the Foundry system gets to define the system property on '?something?'
-//e.g. system.quantity
-//or system.attributes.str.value
-//Modules work underneath flags
-//and within flags, you're supposed to namespace stuff by package ID */
-//"ada", "baa", "bro", "bye", "cin", "cop", "Dar", "eth", "gol", "iro", "ori", "qui", "sta", "ste", "thi", "tin"
-// Climate, Color, Condition, craftLevel, 
-
-/**Hooks.on('renderItemSheet5e', (app, html, data) => {
-  const { item } = data
-  if (!["loot", "equipment", "weapon"].includes(item.type)) return;
-  const choices = { Craft_Matterial, Craft_Source, Cursed, Blessed, } // prep the info here 
-  // im guessing these are what the dropdown boxes are labeled as AKA 4 drop down boxes
-  const optionString = HandlebarsHelpers.selectOptions(Craft_Matterial, Craft_Source, Cursed, Blessed)
-  { hash: { selected: item.getFlag("moduleid", "craftOptions") } }
-  const htmlString = `<select name="flags.moduleid.craftOptions>${optionString}</select>`
-  // use jquery to add it to the right spot in the `html`
-  // - this means location on item sheet
-  // I need to learn what is jquery and how too. 
-})
- 
- */
